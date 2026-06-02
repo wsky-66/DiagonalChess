@@ -452,6 +452,7 @@ void Game::handleBoardClick(int r, int c) {
     if (gameOver) return;
     if (aiMode && !netMode && currentTurn == aiSide) return;
     if (netState == NetState::CONNECTED && currentTurn != netSide) return;
+    if (undoRequestSent || undoRequestReceived || restartRequestSent || restartRequestReceived) return;
 
     if (!pieceSelected) {
         if (board[r][c].alive && board[r][c].side == currentTurn) {
@@ -493,15 +494,34 @@ void Game::handleBoardClick(int r, int c) {
 
 void Game::handleButtonClick(float mx, float my) {
     if (undoAcceptBtn.bounds.contains(mx, my) && undoRequestReceived) {
-        sendUndoResponse(true);
-        doOnlineUndo();
+        sf::Packet pkt;
+        pkt << 2;
+        socket.send(pkt);
         undoRequestReceived = false;
         playClickSound();
         return;
     }
     if (undoRejectBtn.bounds.contains(mx, my) && undoRequestReceived) {
-        sendUndoResponse(false);
+        sf::Packet pkt;
+        pkt << 3;
+        socket.send(pkt);
         undoRequestReceived = false;
+        playClickSound();
+        return;
+    }
+    if (restartAcceptBtn.bounds.contains(mx, my) && restartRequestReceived) {
+        sf::Packet pkt;
+        pkt << 5;
+        socket.send(pkt);
+        restartRequestReceived = false;
+        playClickSound();
+        return;
+    }
+    if (restartRejectBtn.bounds.contains(mx, my) && restartRequestReceived) {
+        sf::Packet pkt;
+        pkt << 6;
+        socket.send(pkt);
+        restartRequestReceived = false;
         playClickSound();
         return;
     }
@@ -516,20 +536,7 @@ void Game::handleButtonClick(float mx, float my) {
             undoMove();
         }
         playClickSound();
-    } else     if (restartAcceptBtn.bounds.contains(mx, my) && restartRequestReceived) {
-        sendRestartResponse(true);
-        restartGame();
-        restartRequestReceived = false;
-        playClickSound();
-        return;
-    }
-    if (restartRejectBtn.bounds.contains(mx, my) && restartRequestReceived) {
-        sendRestartResponse(false);
-        restartRequestReceived = false;
-        playClickSound();
-        return;
-    }
-    if (restartBtn.bounds.contains(mx, my) && !restartBtn.disabled) {
+    } else if (restartBtn.bounds.contains(mx, my) && !restartBtn.disabled) {
         if (netState == NetState::CONNECTED) {
             if (!restartRequestSent) {
                 sendRestartRequest();
@@ -1743,30 +1750,14 @@ void Game::sendUndoRequest() {
     socket.send(packet);
 }
 
-void Game::sendUndoResponse(bool accept) {
-    sf::Packet packet;
-    packet << (accept ? 2 : 3);
-    socket.send(packet);
-}
-
 void Game::sendRestartRequest() {
     sf::Packet packet;
     packet << 4;
     socket.send(packet);
 }
 
-void Game::sendRestartResponse(bool accept) {
-    sf::Packet packet;
-    packet << (accept ? 5 : 6);
-    socket.send(packet);
-}
-
-void Game::doOnlineUndo() {
-    if (moveHistory.empty()) return;
-
-    int steps = (moveHistory.top().side == undoRequesterSide) ? 1 : 2;
+void Game::applyUndoSteps(int steps) {
     if ((int)moveHistory.size() < steps) return;
-
     for (int i = 0; i < steps; i++) {
         MoveRecord record = moveHistory.top();
         moveHistory.pop();
@@ -1801,17 +1792,30 @@ void Game::pollNetwork() {
             undoRequestReceived = true;
             undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
         } else if (msgType == 2) {
-            doOnlineUndo();
             undoRequestSent = false;
+            int steps = (moveHistory.top().side == undoRequesterSide) ? 1 : 2;
+            applyUndoSteps(steps);
+            sf::Packet undoPkt;
+            undoPkt << 7 << steps;
+            socket.send(undoPkt);
         } else if (msgType == 3) {
             undoRequestSent = false;
         } else if (msgType == 4) {
             restartRequestReceived = true;
         } else if (msgType == 5) {
-            restartGame();
             restartRequestSent = false;
+            restartGame();
+            sf::Packet rstPkt;
+            rstPkt << 8;
+            socket.send(rstPkt);
         } else if (msgType == 6) {
             restartRequestSent = false;
+        } else if (msgType == 7) {
+            int steps;
+            packet >> steps;
+            applyUndoSteps(steps);
+        } else if (msgType == 8) {
+            restartGame();
         }
     } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
         disconnectNetwork();

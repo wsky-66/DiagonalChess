@@ -130,10 +130,8 @@ private:
     void startClient();
     void sendMove(int fromR, int fromC, int toR, int toC);
     void sendUndoRequest();
-    void sendUndoResponse(bool accept);
     void sendRestartRequest();
-    void sendRestartResponse(bool accept);
-    void doOnlineUndo();
+    void applyUndoSteps(int steps);
     void pollNetwork();
     void disconnectNetwork();
     std::wstring getLocalIP() const;
