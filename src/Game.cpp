@@ -1670,12 +1670,18 @@ void Game::sendUndoResponse(bool accept) {
 
 void Game::doOnlineUndo() {
     if (moveHistory.empty()) return;
-    MoveRecord record = moveHistory.top();
-    moveHistory.pop();
-    board[record.fromR][record.fromC] = record.movedPiece;
-    board[record.toR][record.toC] = record.capturedPiece;
-    currentTurn = record.side;
-    if (!moveLogStrings.empty()) moveLogStrings.pop_back();
+
+    int steps = (moveHistory.top().side == undoRequesterSide) ? 1 : 2;
+    if ((int)moveHistory.size() < steps) return;
+
+    for (int i = 0; i < steps; i++) {
+        MoveRecord record = moveHistory.top();
+        moveHistory.pop();
+        board[record.fromR][record.fromC] = record.movedPiece;
+        board[record.toR][record.toC] = record.capturedPiece;
+        currentTurn = record.side;
+        if (!moveLogStrings.empty()) moveLogStrings.pop_back();
+    }
     pieceSelected = false;
     validMoves.clear();
     if (gameOver) {
@@ -1700,6 +1706,7 @@ void Game::pollNetwork() {
             receivingMove = false;
         } else if (msgType == 1) {
             undoRequestReceived = true;
+            undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
         } else if (msgType == 2) {
             doOnlineUndo();
             undoRequestSent = false;

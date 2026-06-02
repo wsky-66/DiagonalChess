@@ -189,6 +189,7 @@ private:
     bool receivingMove;
     bool undoRequestSent;
     bool undoRequestReceived;
+    Side undoRequesterSide;
 
     bool aiMode;
     Side aiSide;
