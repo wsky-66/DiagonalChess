@@ -27,6 +27,7 @@ Game::Game()
     , showIPInput(false)
     , netMode(false)
     , netSide(Side::RED)
+    , receivingMove(false)
 {
     window.setFramerateLimit(60);
 
@@ -552,7 +553,7 @@ void Game::executeMove(int fromR, int fromC, int toR, int toC) {
         moveLogStrings.erase(moveLogStrings.begin());
     }
 
-    if (netState == NetState::CONNECTED) {
+    if (netState == NetState::CONNECTED && !receivingMove) {
         sendMove(fromR, fromC, toR, toC);
     }
 
@@ -1581,7 +1582,9 @@ void Game::pollNetwork() {
     if (status == sf::Socket::Done) {
         int fromR, fromC, toR, toC;
         packet >> fromR >> fromC >> toR >> toC;
+        receivingMove = true;
         executeMove(fromR, fromC, toR, toC);
+        receivingMove = false;
     } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
         disconnectNetwork();
     }
@@ -1592,6 +1595,8 @@ void Game::disconnectNetwork() {
         socket.disconnect();
         listener.close();
         netState = NetState::OFFLINE;
+        netMode = false;
+        onlineBtn.label = L"\u8054\u673a: \u5173\u95ed";
         showIPInput = false;
     }
 }

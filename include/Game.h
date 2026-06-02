@@ -180,6 +180,7 @@ private:
     bool showIPInput;
     Side netSide;
     bool netMode;
+    bool receivingMove;
 
     bool aiMode;
     Side aiSide;
