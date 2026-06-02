@@ -167,6 +167,8 @@ private:
     bool fontLoaded;
     bool showTutorial;
     int logScrollOffset;
+    float logDividerY;
+    bool draggingLogDivider;
 
     UIButton undoBtn;
     UIButton restartBtn;
