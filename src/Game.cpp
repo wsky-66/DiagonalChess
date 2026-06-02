@@ -539,7 +539,7 @@ void Game::handleBoardClick(int r, int c) {
 }
 
 void Game::handleButtonClick(float mx, float my) {
-    if (showTutorial && mx >= 1088 && mx <= 1128 && my >= 394 && my <= 418) {
+    if (showTutorial && mx >= 1090 && mx <= 1140 && my >= 4 && my <= 32) {
         showTutorial = false;
         playClickSound();
         return;
@@ -1984,26 +1984,26 @@ void Game::drawNetUI() {
 void Game::drawTutorialPanel() {
     if (!fontLoaded) return;
     
-    sf::RectangleShape bg(sf::Vector2f(420, 400));
-    bg.setPosition(715, 390);
-    bg.setFillColor(sf::Color(45, 35, 22, 245));
+    sf::RectangleShape bg(sf::Vector2f(440, 820));
+    bg.setPosition(710, 0);
+    bg.setFillColor(sf::Color(38, 28, 18, 250));
     bg.setOutlineColor(sf::Color(120, 100, 70));
     bg.setOutlineThickness(2);
     window.draw(bg);
     
-    sf::RectangleShape header(sf::Vector2f(420, 32));
-    header.setPosition(715, 390);
-    header.setFillColor(sf::Color(70, 56, 40));
+    sf::RectangleShape header(sf::Vector2f(440, 36));
+    header.setPosition(710, 0);
+    header.setFillColor(sf::Color(55, 42, 30));
     window.draw(header);
-    drawTextWithShadow(L"\u65b0\u624b\u6559\u7a0b", 880, 406, 18, sf::Color(255, 220, 150), true);
+    drawTextWithShadow(L"\u65b0\u624b\u6559\u7a0b", 930, 18, 20, sf::Color(255, 220, 150), true);
     
-    sf::RectangleShape closeBtn(sf::Vector2f(40, 24));
-    closeBtn.setPosition(1088, 394);
-    closeBtn.setFillColor(sf::Color(160, 50, 50));
-    closeBtn.setOutlineColor(sf::Color(200, 80, 80));
+    sf::RectangleShape closeBtn(sf::Vector2f(50, 28));
+    closeBtn.setPosition(1090, 4);
+    closeBtn.setFillColor(sf::Color(180, 50, 50));
+    closeBtn.setOutlineColor(sf::Color(220, 80, 80));
     closeBtn.setOutlineThickness(2);
     window.draw(closeBtn);
-    drawTextWithShadow(L"\u2716", 1108, 406, 16, sf::Color::White, true);
+    drawTextWithShadow(L"\u2716", 1115, 18, 18, sf::Color::White, true);
     
     const wchar_t* lines[] = {
         L"\u3010\u68cb\u76d8\u3011 9x9\u4ea4\u70b9\uff0c\u68cb\u76d8\u659c\u653e\uff0c",
@@ -2027,7 +2027,7 @@ void Game::drawTutorialPanel() {
         L"\u3010\u614c\u68cb\u3011\u8054\u673a\u65f6\u9700\u53cc\u65b9\u540c\u610f\u3002",
     };
     
-    float y = 430;
+    float y = 50;
     for (const auto& line : lines) {
         bool isHeader = (wcslen(line) > 0 && line[0] == L'\u3010');
         drawText(line, 730, y, isHeader ? 16 : 14, 
