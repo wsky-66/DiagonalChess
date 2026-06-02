@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <SFML/Network.hpp>
 #include <vector>
 #include <string>
 #include <stack>
@@ -11,6 +12,8 @@ enum class PieceType { NONE, CHARIOT, HORSE, ELEPHANT, ADVISOR, GENERAL, CANNON,
 enum class Side { RED, BLACK };
 
 enum class AIDifficulty { EASY, MEDIUM, HARD };
+
+enum class NetState { OFFLINE, HOST_WAITING, CONNECTING, CONNECTED };
 
 struct Piece {
     PieceType type = PieceType::NONE;
@@ -123,6 +126,14 @@ private:
     void playClickSound();
     void initSounds();
 
+    void startHost();
+    void startClient();
+    void sendMove(int fromR, int fromC, int toR, int toC);
+    void pollNetwork();
+    void disconnectNetwork();
+    std::wstring getLocalIP() const;
+    void drawNetUI();
+
     void doAITurn();
     std::vector<AIMove> generateAllMoves(const Piece b[9][9], Side side) const;
     int evaluate(const Piece b[9][9]) const;
@@ -155,6 +166,20 @@ private:
     UIButton aiBtn;
     UIButton difficultyBtn;
     UIButton gameOverRestartBtn;
+    UIButton onlineBtn;
+    UIButton hostBtn;
+    UIButton joinBtn;
+    UIButton connectBtn;
+    UIButton disconnectBtn;
+
+    NetState netState;
+    sf::TcpListener listener;
+    sf::TcpSocket socket;
+    std::wstring localIP;
+    std::wstring inputIP;
+    bool showIPInput;
+    Side netSide;
+    bool netMode;
 
     bool aiMode;
     Side aiSide;

@@ -23,6 +23,10 @@ Game::Game()
     , aiThinking(false)
     , aiDelayTimer(0.f)
     , soundsLoaded(false)
+    , netState(NetState::OFFLINE)
+    , showIPInput(false)
+    , netMode(false)
+    , netSide(Side::RED)
 {
     window.setFramerateLimit(60);
 
@@ -36,6 +40,11 @@ Game::Game()
     restartBtn = {sf::FloatRect(735, 300, 190, 48), L"\u91cd\u65b0\u5f00\u59cb", false, false};
     aiBtn = {sf::FloatRect(735, 360, 190, 48), L"AI: \u5173\u95ed", false, false};
     difficultyBtn = {sf::FloatRect(735, 420, 190, 48), L"\u96be\u5ea6: \u4e2d\u7b49", false, false};
+    onlineBtn = {sf::FloatRect(735, 480, 190, 48), L"\u8054\u673a: \u5173\u95ed", false, false};
+    hostBtn = {sf::FloatRect(735, 540, 190, 48), L"\u521b\u5efa\u623f\u95f4", false, false};
+    joinBtn = {sf::FloatRect(735, 600, 190, 48), L"\u52a0\u5165\u623f\u95f4", false, false};
+    connectBtn = {sf::FloatRect(735, 660, 190, 48), L"\u8fde\u63a5", false, false};
+    disconnectBtn = {sf::FloatRect(735, 540, 190, 48), L"\u65ad\u5f00\u8fde\u63a5", false, false};
     gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91cd\u65b0\u5f00\u59cb", false, false};
 
     placePieces();
@@ -87,6 +96,25 @@ void Game::processEvents() {
             aiBtn.hovered = aiBtn.bounds.contains(mx, my);
             difficultyBtn.hovered = difficultyBtn.bounds.contains(mx, my);
             gameOverRestartBtn.hovered = gameOverRestartBtn.bounds.contains(mx, my);
+            onlineBtn.hovered = onlineBtn.bounds.contains(mx, my);
+            hostBtn.hovered = hostBtn.bounds.contains(mx, my);
+            joinBtn.hovered = joinBtn.bounds.contains(mx, my);
+            connectBtn.hovered = connectBtn.bounds.contains(mx, my);
+            disconnectBtn.hovered = disconnectBtn.bounds.contains(mx, my);
+        }
+
+        if (event.type == sf::Event::TextEntered && showIPInput) {
+            if (event.text.unicode == 8) {
+                if (!inputIP.empty()) inputIP.pop_back();
+            } else if (event.text.unicode < 128 && event.text.unicode != 13) {
+                if (inputIP.size() < 15) {
+                    inputIP += static_cast<wchar_t>(event.text.unicode);
+                }
+            } else if (event.text.unicode == 13) {
+                if (!inputIP.empty()) {
+                    startClient();
+                }
+            }
         }
     }
 }
@@ -98,7 +126,24 @@ void Game::update(float dt) {
         gameOverTimer += dt;
     }
 
-    if (aiMode && currentTurn == aiSide && !gameOver) {
+    if (netState == NetState::HOST_WAITING) {
+        sf::Socket::Status status = listener.accept(socket);
+        if (status == sf::Socket::Done) {
+            socket.setBlocking(false);
+            netState = NetState::CONNECTED;
+            netSide = Side::RED;
+            netMode = true;
+            aiMode = false;
+            aiBtn.label = L"AI: \u5173\u95ed";
+            restartGame();
+        }
+    }
+
+    if (netState == NetState::CONNECTED && !gameOver) {
+        pollNetwork();
+    }
+
+    if (aiMode && !netMode && currentTurn == aiSide && !gameOver) {
         aiDelayTimer += dt;
         aiThinking = true;
         
@@ -136,6 +181,7 @@ void Game::render() {
     drawPieces();
     drawUI();
     drawButtons();
+    drawNetUI();
     drawMoveLog();
 
     if (gameOver) {
@@ -367,7 +413,8 @@ bool Game::canSoldierMove(const Piece b[9][9], int fr, int fc, int tr, int tc, S
 
 void Game::handleBoardClick(int r, int c) {
     if (gameOver) return;
-    if (aiMode && currentTurn == aiSide) return;
+    if (aiMode && !netMode && currentTurn == aiSide) return;
+    if (netState == NetState::CONNECTED && currentTurn != netSide) return;
 
     if (!pieceSelected) {
         if (board[r][c].alive && board[r][c].side == currentTurn) {
@@ -433,6 +480,28 @@ void Game::handleButtonClick(float mx, float my) {
             difficultyBtn.label = L"\u96be\u5ea6: \u7b80\u5355";
         }
         playClickSound();
+    } else if (onlineBtn.bounds.contains(mx, my) && !onlineBtn.disabled) {
+        netMode = !netMode;
+        onlineBtn.label = netMode ? L"\u8054\u673a: \u5f00\u542f" : L"\u8054\u673a: \u5173\u95ed";
+        if (!netMode) {
+            disconnectNetwork();
+            showIPInput = false;
+        }
+        playClickSound();
+    } else if (netMode && hostBtn.bounds.contains(mx, my) && netState == NetState::OFFLINE) {
+        startHost();
+        playClickSound();
+    } else if (netMode && joinBtn.bounds.contains(mx, my) && netState == NetState::OFFLINE) {
+        showIPInput = true;
+        inputIP.clear();
+        playClickSound();
+    } else if (netMode && connectBtn.bounds.contains(mx, my) && showIPInput && !inputIP.empty()) {
+        startClient();
+        playClickSound();
+    } else if (netMode && disconnectBtn.bounds.contains(mx, my) && netState != NetState::OFFLINE) {
+        disconnectNetwork();
+        showIPInput = false;
+        playClickSound();
     }
 }
 
@@ -481,6 +550,10 @@ void Game::executeMove(int fromR, int fromC, int toR, int toC) {
     moveLogStrings.push_back(moveStr);
     if ((int)moveLogStrings.size() > Game::MAX_LOG * 2) {
         moveLogStrings.erase(moveLogStrings.begin());
+    }
+
+    if (netState == NetState::CONNECTED) {
+        sendMove(fromR, fromC, toR, toC);
     }
 
     currentTurn = (currentTurn == Side::RED) ? Side::BLACK : Side::RED;
@@ -986,27 +1059,32 @@ void Game::drawButtons() {
     drawBtn(restartBtn);
     drawBtn(aiBtn);
     drawBtn(difficultyBtn);
+    drawBtn(onlineBtn);
 }
 
 void Game::drawMoveLog() {
     if (!fontLoaded) return;
 
-    sf::RectangleShape logBg(sf::Vector2f(420, 330));
-    logBg.setPosition(715, 490);
+    float logY = netMode ? 730.f : 490.f;
+    float logH = netMode ? 80.f : 330.f;
+    int maxLines = netMode ? 3 : Game::MAX_LOG;
+
+    sf::RectangleShape logBg(sf::Vector2f(420, logH));
+    logBg.setPosition(715, logY);
     logBg.setFillColor(sf::Color(55, 44, 32));
     logBg.setOutlineColor(sf::Color(85, 70, 52));
     logBg.setOutlineThickness(1);
     window.draw(logBg);
 
     sf::RectangleShape logHeader(sf::Vector2f(420, 35));
-    logHeader.setPosition(715, 490);
+    logHeader.setPosition(715, logY);
     logHeader.setFillColor(sf::Color(70, 56, 40));
     window.draw(logHeader);
     
-    drawTextWithShadow(L"\u8d70\u68cb\u8bb0\u5f55", 925, 507, 18, sf::Color(230, 210, 180), true);
+    drawTextWithShadow(L"\u8d70\u68cb\u8bb0\u5f55", 925, logY + 17, 18, sf::Color(230, 210, 180), true);
 
-    int startIdx = std::max(0, (int)moveLogStrings.size() - Game::MAX_LOG);
-    float y = 535;
+    int startIdx = std::max(0, (int)moveLogStrings.size() - maxLines);
+    float y = logY + 45;
     for (int i = startIdx; i < (int)moveLogStrings.size(); i++) {
         if (i % 2 == 0) {
             sf::RectangleShape rowBg(sf::Vector2f(410, 22));
@@ -1462,5 +1540,187 @@ int Game::getPositionBonus(PieceType type, int r, int c, Side side) const {
             return 0;
         default:
             return 0;
+    }
+}
+
+void Game::startHost() {
+    localIP = getLocalIP();
+    listener.setBlocking(false);
+    if (listener.listen(55001) == sf::Socket::Done) {
+        netState = NetState::HOST_WAITING;
+        netSide = Side::RED;
+    }
+}
+
+void Game::startClient() {
+    socket.setBlocking(true);
+    std::string ipStr(inputIP.begin(), inputIP.end());
+    sf::Socket::Status status = socket.connect(sf::IpAddress(ipStr), 55001, sf::seconds(3));
+    if (status == sf::Socket::Done) {
+        socket.setBlocking(false);
+        netState = NetState::CONNECTED;
+        netSide = Side::BLACK;
+        aiMode = false;
+        aiBtn.label = L"AI: \u5173\u95ed";
+        showIPInput = false;
+        restartGame();
+    } else {
+        showIPInput = true;
+    }
+}
+
+void Game::sendMove(int fromR, int fromC, int toR, int toC) {
+    sf::Packet packet;
+    packet << fromR << fromC << toR << toC;
+    socket.send(packet);
+}
+
+void Game::pollNetwork() {
+    sf::Packet packet;
+    sf::Socket::Status status = socket.receive(packet);
+    if (status == sf::Socket::Done) {
+        int fromR, fromC, toR, toC;
+        packet >> fromR >> fromC >> toR >> toC;
+        executeMove(fromR, fromC, toR, toC);
+    } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
+        disconnectNetwork();
+    }
+}
+
+void Game::disconnectNetwork() {
+    if (netState != NetState::OFFLINE) {
+        socket.disconnect();
+        listener.close();
+        netState = NetState::OFFLINE;
+        showIPInput = false;
+    }
+}
+
+std::wstring Game::getLocalIP() const {
+    sf::IpAddress ip = sf::IpAddress::getLocalAddress();
+    std::string ipStr = ip.toString();
+    return std::wstring(ipStr.begin(), ipStr.end());
+}
+
+void Game::drawNetUI() {
+    if (!fontLoaded) return;
+    if (!netMode) return;
+
+    float y = 540;
+
+    if (netState == NetState::OFFLINE) {
+        auto drawNetBtn = [this](const UIButton& btn) {
+            sf::RectangleShape shadow(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+            shadow.setPosition(btn.bounds.left + 2, btn.bounds.top + 2);
+            shadow.setFillColor(sf::Color(20, 15, 10, 100));
+            window.draw(shadow);
+
+            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+            rect.setPosition(btn.bounds.left, btn.bounds.top);
+            sf::Color fillColor = btn.hovered ? sf::Color(80, 120, 80) : sf::Color(60, 90, 60);
+            rect.setFillColor(fillColor);
+            rect.setOutlineColor(sf::Color(100, 150, 100));
+            rect.setOutlineThickness(2);
+            window.draw(rect);
+
+            sf::Text t;
+            t.setFont(font);
+            t.setString(btn.label);
+            t.setCharacterSize(20);
+            t.setFillColor(sf::Color(230, 255, 230));
+            sf::FloatRect bounds = t.getLocalBounds();
+            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                         btn.bounds.top + btn.bounds.height / 2.f);
+            window.draw(t);
+        };
+
+        drawNetBtn(hostBtn);
+        drawNetBtn(joinBtn);
+
+        if (showIPInput) {
+            sf::RectangleShape inputBg(sf::Vector2f(190, 35));
+            inputBg.setPosition(735, 660);
+            inputBg.setFillColor(sf::Color(40, 35, 28));
+            inputBg.setOutlineColor(sf::Color(120, 100, 80));
+            inputBg.setOutlineThickness(2);
+            window.draw(inputBg);
+
+            std::wstring displayIP = inputIP.empty() ? L"\u8f93\u5165IP\u5730\u5740..." : inputIP;
+            sf::Color ipColor = inputIP.empty() ? sf::Color(120, 110, 100) : sf::Color(240, 230, 220);
+            drawText(displayIP, 745, 677, 16, ipColor);
+
+            drawNetBtn(connectBtn);
+        }
+    } else if (netState == NetState::HOST_WAITING) {
+        sf::RectangleShape statusBg(sf::Vector2f(190, 100));
+        statusBg.setPosition(735, 540);
+        statusBg.setFillColor(sf::Color(50, 45, 35));
+        statusBg.setOutlineColor(sf::Color(80, 70, 55));
+        statusBg.setOutlineThickness(1);
+        window.draw(statusBg);
+
+        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 560, 18, sf::Color(200, 200, 150), true);
+        drawText(L"\u672c\u673aIP:", 830, 590, 14, sf::Color(180, 180, 180), true);
+        drawText(localIP, 830, 615, 16, sf::Color(100, 255, 100), true);
+
+        auto drawNetBtn = [this](const UIButton& btn) {
+            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+            rect.setPosition(btn.bounds.left, btn.bounds.top);
+            rect.setFillColor(btn.hovered ? sf::Color(150, 60, 60) : sf::Color(120, 40, 40));
+            rect.setOutlineColor(sf::Color(180, 80, 80));
+            rect.setOutlineThickness(2);
+            window.draw(rect);
+
+            sf::Text t;
+            t.setFont(font);
+            t.setString(btn.label);
+            t.setCharacterSize(20);
+            t.setFillColor(sf::Color(255, 220, 220));
+            sf::FloatRect bounds = t.getLocalBounds();
+            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                         btn.bounds.top + btn.bounds.height / 2.f);
+            window.draw(t);
+        };
+
+        disconnectBtn.bounds.top = 650;
+        drawNetBtn(disconnectBtn);
+    } else if (netState == NetState::CONNECTED) {
+        sf::RectangleShape statusBg(sf::Vector2f(190, 80));
+        statusBg.setPosition(735, 540);
+        statusBg.setFillColor(sf::Color(40, 60, 40));
+        statusBg.setOutlineColor(sf::Color(80, 120, 80));
+        statusBg.setOutlineThickness(1);
+        window.draw(statusBg);
+
+        drawText(L"\u5df2\u8fde\u63a5", 830, 560, 20, sf::Color(100, 255, 100), true);
+
+        std::wstring sideText = (netSide == Side::RED) ? L"\u4f60\u662f\u7ea2\u65b9" : L"\u4f60\u662f\u9ed1\u65b9";
+        sf::Color sideColor = (netSide == Side::RED) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200);
+        drawText(sideText, 830, 595, 18, sideColor, true);
+
+        auto drawNetBtn = [this](const UIButton& btn) {
+            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+            rect.setPosition(btn.bounds.left, btn.bounds.top);
+            rect.setFillColor(btn.hovered ? sf::Color(150, 60, 60) : sf::Color(120, 40, 40));
+            rect.setOutlineColor(sf::Color(180, 80, 80));
+            rect.setOutlineThickness(2);
+            window.draw(rect);
+
+            sf::Text t;
+            t.setFont(font);
+            t.setString(btn.label);
+            t.setCharacterSize(20);
+            t.setFillColor(sf::Color(255, 220, 220));
+            sf::FloatRect bounds = t.getLocalBounds();
+            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                         btn.bounds.top + btn.bounds.height / 2.f);
+            window.draw(t);
+        };
+
+        disconnectBtn.bounds.top = 630;
+        drawNetBtn(disconnectBtn);
     }
 }
