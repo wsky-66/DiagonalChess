@@ -166,6 +166,7 @@ private:
     sf::View view;
     bool fontLoaded;
     bool showTutorial;
+    int logScrollOffset;
 
     UIButton undoBtn;
     UIButton restartBtn;

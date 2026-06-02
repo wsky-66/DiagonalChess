@@ -43,21 +43,12 @@ Game::Game()
         fontLoaded = true;
     }
 
-    undoBtn = {sf::FloatRect(735, 240, 190, 44), L"\u6094\u68cb", false, false};
-    restartBtn = {sf::FloatRect(735, 290, 190, 44), L"\u91cd\u65b0\u5f00\u59cb", false, false};
-    aiBtn = {sf::FloatRect(735, 340, 190, 44), L"AI: \u5173\u95ed", false, false};
-    difficultyBtn = {sf::FloatRect(735, 390, 190, 44), L"\u96be\u5ea6: \u4e2d\u7b49", false, false};
-    onlineBtn = {sf::FloatRect(735, 440, 190, 44), L"\u8054\u673a: \u5173\u95ed", false, false};
-    hostBtn = {sf::FloatRect(735, 495, 190, 44), L"\u521b\u5efa\u623f\u95f4", false, false};
-    joinBtn = {sf::FloatRect(735, 545, 190, 44), L"\u52a0\u5165\u623f\u95f4", false, false};
-    connectBtn = {sf::FloatRect(735, 640, 190, 44), L"\u8fde\u63a5", false, false};
-    disconnectBtn = {sf::FloatRect(735, 495, 190, 44), L"\u65ad\u5f00\u8fde\u63a5", false, false};
-    gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91cd\u65b0\u5f00\u59cb", false, false};
-    undoAcceptBtn = {sf::FloatRect(735, 240, 90, 44), L"\u540c\u610f", false, false};
-    undoRejectBtn = {sf::FloatRect(835, 240, 90, 44), L"\u62d2\u7edd", false, false};
-    restartAcceptBtn = {sf::FloatRect(735, 295, 90, 44), L"\u540c\u610f", false, false};
-    restartRejectBtn = {sf::FloatRect(835, 295, 90, 44), L"\u62d2\u7edd", false, false};
-    tutorialBtn = {sf::FloatRect(735, 490, 190, 44), L"\u65b0\u624b\u6559\u7a0b", false, false};
+    undoBtn = {sf::FloatRect(735, 240, 90, 40), L"\u6094\u68cb", false, false};
+    restartBtn = {sf::FloatRect(835, 240, 90, 40), L"\u91cd\u5f00", false, false};
+    aiBtn = {sf::FloatRect(735, 286, 90, 40), L"AI: \u5173", false, false};
+    difficultyBtn = {sf::FloatRect(835, 286, 90, 40), L"\u4e2d\u7b49", false, false};
+    onlineBtn = {sf::FloatRect(735, 332, 90, 40), L"\u8054\u673a: \u5173", false, false};
+    tutorialBtn = {sf::FloatRect(835, 332, 90, 40), L"\u6559\u7a0b", false, false};
 
     placePieces();
     initSounds();
@@ -109,6 +100,13 @@ void Game::processEvents() {
                 if (gridPos.x >= 0 && gridPos.x < 9 && gridPos.y >= 0 && gridPos.y < 9) {
                     handleBoardClick(gridPos.x, gridPos.y);
                 }
+            }
+        }
+
+        if (event.type == sf::Event::MouseWheelScrolled) {
+            int x = event.mouseWheelScroll.x;
+            if (x >= 715 && x <= 1135) {
+                logScrollOffset -= (int)event.mouseWheelScroll.delta;
             }
         }
 
@@ -566,26 +564,26 @@ void Game::handleButtonClick(float mx, float my) {
         playClickSound();
     } else if (aiBtn.bounds.contains(mx, my) && !aiBtn.disabled) {
         aiMode = !aiMode;
-        aiBtn.label = aiMode ? L"AI: \u5f00\u542f" : L"AI: \u5173\u95ed";
+        aiBtn.label = aiMode ? L"AI: \u5f00" : L"AI: \u5173";
         playClickSound();
     } else if (difficultyBtn.bounds.contains(mx, my) && !difficultyBtn.disabled) {
         if (aiDifficulty == AIDifficulty::EASY) {
             aiDifficulty = AIDifficulty::MEDIUM;
             aiDepth = 3;
-            difficultyBtn.label = L"\u96be\u5ea6: \u4e2d\u7b49";
+            difficultyBtn.label = L"\u4e2d\u7b49";
         } else if (aiDifficulty == AIDifficulty::MEDIUM) {
             aiDifficulty = AIDifficulty::HARD;
             aiDepth = 4;
-            difficultyBtn.label = L"\u96be\u5ea6: \u56f0\u96be";
+            difficultyBtn.label = L"\u56f0\u96be";
         } else {
             aiDifficulty = AIDifficulty::EASY;
             aiDepth = 2;
-            difficultyBtn.label = L"\u96be\u5ea6: \u7b80\u5355";
+            difficultyBtn.label = L"\u7b80\u5355";
         }
         playClickSound();
     } else if (onlineBtn.bounds.contains(mx, my) && !onlineBtn.disabled) {
         netMode = !netMode;
-        onlineBtn.label = netMode ? L"\u8054\u673a: \u5f00\u542f" : L"\u8054\u673a: \u5173\u95ed";
+        onlineBtn.label = netMode ? L"\u8054\u673a: \u5f00" : L"\u8054\u673a: \u5173";
         if (!netMode) {
             disconnectNetwork();
             showIPInput = false;
@@ -1140,7 +1138,7 @@ void Game::drawButtons() {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(18);
+            t.setCharacterSize(15);
             sf::Color textColor = btn.disabled ? sf::Color(110, 100, 88) : sf::Color(245, 235, 220);
             t.setFillColor(textColor);
             sf::FloatRect bounds = t.getLocalBounds();
@@ -1158,85 +1156,59 @@ void Game::drawButtons() {
     drawBtn(onlineBtn);
     drawBtn(tutorialBtn);
 
+    auto drawSmallBtn = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
+        sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+        rect.setPosition(btn.bounds.left, btn.bounds.top);
+        rect.setFillColor(btn.hovered ? sf::Color(fill.r + 40, fill.g + 30, fill.b + 20) : fill);
+        rect.setOutlineColor(outline);
+        rect.setOutlineThickness(2);
+        window.draw(rect);
+        sf::Text t;
+        t.setFont(font);
+        t.setString(btn.label);
+        t.setCharacterSize(14);
+        t.setFillColor(sf::Color(255, 255, 255));
+        sf::FloatRect bounds = t.getLocalBounds();
+        t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+        t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                     btn.bounds.top + btn.bounds.height / 2.f);
+        window.draw(t);
+    };
+
     if (undoRequestReceived) {
         sf::RectangleShape bg(sf::Vector2f(190, 70));
-        bg.setPosition(735, 230);
+        bg.setPosition(735, 225);
         bg.setFillColor(sf::Color(180, 130, 30, 220));
         bg.setOutlineColor(sf::Color(255, 180, 50));
         bg.setOutlineThickness(2);
         window.draw(bg);
-
-        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u6094\u68cb", 830, 255, 17, sf::Color(255, 255, 200), true);
-
-        auto drawSmallBtn = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
-            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
-            rect.setPosition(btn.bounds.left, btn.bounds.top);
-            rect.setFillColor(btn.hovered ? sf::Color(fill.r + 40, fill.g + 30, fill.b + 20) : fill);
-            rect.setOutlineColor(outline);
-            rect.setOutlineThickness(2);
-            window.draw(rect);
-
-            sf::Text t;
-            t.setFont(font);
-            t.setString(btn.label);
-            t.setCharacterSize(16);
-            t.setFillColor(sf::Color(255, 255, 255));
-            sf::FloatRect bounds = t.getLocalBounds();
-            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
-            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
-                         btn.bounds.top + btn.bounds.height / 2.f);
-            window.draw(t);
-        };
-
-        undoAcceptBtn.bounds.top = 275;
-        undoRejectBtn.bounds.top = 275;
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u6094\u68cb", 830, 245, 16, sf::Color(255, 255, 200), true);
+        undoAcceptBtn.bounds.top = 260;
+        undoRejectBtn.bounds.top = 260;
         drawSmallBtn(undoAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(undoRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 
     if (restartRequestReceived) {
         sf::RectangleShape bg(sf::Vector2f(190, 70));
-        bg.setPosition(735, 285);
+        bg.setPosition(735, 270);
         bg.setFillColor(sf::Color(180, 130, 30, 220));
         bg.setOutlineColor(sf::Color(255, 180, 50));
         bg.setOutlineThickness(2);
         window.draw(bg);
-
-        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u91cd\u5f00", 830, 310, 17, sf::Color(255, 255, 200), true);
-
-        auto drawSmallBtnR = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
-            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
-            rect.setPosition(btn.bounds.left, btn.bounds.top);
-            rect.setFillColor(btn.hovered ? sf::Color(fill.r + 40, fill.g + 30, fill.b + 20) : fill);
-            rect.setOutlineColor(outline);
-            rect.setOutlineThickness(2);
-            window.draw(rect);
-
-            sf::Text t;
-            t.setFont(font);
-            t.setString(btn.label);
-            t.setCharacterSize(16);
-            t.setFillColor(sf::Color(255, 255, 255));
-            sf::FloatRect bounds = t.getLocalBounds();
-            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
-            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
-                         btn.bounds.top + btn.bounds.height / 2.f);
-            window.draw(t);
-        };
-
-        restartAcceptBtn.bounds.top = 330;
-        restartRejectBtn.bounds.top = 330;
-        drawSmallBtnR(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
-        drawSmallBtnR(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u91cd\u5f00", 830, 290, 16, sf::Color(255, 255, 200), true);
+        restartAcceptBtn.bounds.top = 305;
+        restartRejectBtn.bounds.top = 305;
+        drawSmallBtn(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
+        drawSmallBtn(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 }
 
 void Game::drawMoveLog() {
     if (!fontLoaded) return;
 
-    float logY = netMode ? 700.f : 490.f;
-    float logH = netMode ? 110.f : 330.f;
-    int maxLines = netMode ? 4 : Game::MAX_LOG;
+    float logY = netMode ? 520.f : 380.f;
+    float logH = netMode ? 290.f : 430.f;
 
     sf::RectangleShape logBg(sf::Vector2f(420, logH));
     logBg.setPosition(715, logY);
@@ -1245,29 +1217,33 @@ void Game::drawMoveLog() {
     logBg.setOutlineThickness(1);
     window.draw(logBg);
 
-    sf::RectangleShape logHeader(sf::Vector2f(420, 35));
+    sf::RectangleShape logHeader(sf::Vector2f(420, 30));
     logHeader.setPosition(715, logY);
     logHeader.setFillColor(sf::Color(70, 56, 40));
     window.draw(logHeader);
     
-    drawTextWithShadow(L"\u8d70\u68cb\u8bb0\u5f55", 925, logY + 17, 18, sf::Color(230, 210, 180), true);
+    drawTextWithShadow(L"\u8d70\u68cb\u8bb0\u5f55", 925, logY + 15, 16, sf::Color(230, 210, 180), true);
 
-    int startIdx = std::max(0, (int)moveLogStrings.size() - maxLines);
-    float y = logY + 45;
-    for (int i = startIdx; i < (int)moveLogStrings.size(); i++) {
+    int totalLines = (int)moveLogStrings.size();
+    int visibleLines = (int)((logH - 40) / 22);
+    int maxScroll = std::max(0, totalLines - visibleLines);
+    if (logScrollOffset > maxScroll) logScrollOffset = maxScroll;
+    if (logScrollOffset < 0) logScrollOffset = 0;
+
+    int startIdx = std::max(0, totalLines - visibleLines - logScrollOffset);
+    float y = logY + 40;
+    for (int i = startIdx; i < totalLines; i++) {
         if (i % 2 == 0) {
-            sf::RectangleShape rowBg(sf::Vector2f(410, 22));
-            rowBg.setPosition(720, y - 4);
+            sf::RectangleShape rowBg(sf::Vector2f(410, 20));
+            rowBg.setPosition(720, y - 2);
             rowBg.setFillColor(sf::Color(65, 52, 38, 100));
             window.draw(rowBg);
         }
-        
         std::wostringstream oss;
         oss << (i + 1) << L". " << moveLogStrings[i];
-        
         sf::Color c = (i % 2 == 0) ? sf::Color(255, 140, 140) : sf::Color(220, 220, 220);
         drawText(oss.str(), 730, y, 13, c);
-        y += 24;
+        y += 22;
     }
 }
 
@@ -1885,7 +1861,7 @@ void Game::drawNetUI() {
 
         if (showIPInput) {
             sf::RectangleShape inputBg(sf::Vector2f(190, 35));
-            inputBg.setPosition(735, 595);
+            inputBg.setPosition(735, 430);
             inputBg.setFillColor(sf::Color(40, 35, 28));
             inputBg.setOutlineColor(sf::Color(120, 100, 80));
             inputBg.setOutlineThickness(2);
@@ -1893,21 +1869,21 @@ void Game::drawNetUI() {
 
             std::wstring displayIP = inputIP.empty() ? L"\u8f93\u5165IP\u5730\u5740..." : inputIP;
             sf::Color ipColor = inputIP.empty() ? sf::Color(120, 110, 100) : sf::Color(240, 230, 220);
-            drawText(displayIP, 745, 602, 15, ipColor);
+            drawText(displayIP, 745, 437, 15, ipColor);
 
             drawNetBtn(connectBtn);
         }
     } else if (netState == NetState::HOST_WAITING) {
-        sf::RectangleShape statusBg(sf::Vector2f(190, 100));
-        statusBg.setPosition(735, 495);
+        sf::RectangleShape statusBg(sf::Vector2f(190, 90));
+        statusBg.setPosition(735, 382);
         statusBg.setFillColor(sf::Color(50, 45, 35));
         statusBg.setOutlineColor(sf::Color(80, 70, 55));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 515, 18, sf::Color(200, 200, 150), true);
-        drawText(L"\u672c\u673aIP:", 830, 545, 14, sf::Color(180, 180, 180), true);
-        drawText(localIP, 830, 570, 16, sf::Color(100, 255, 100), true);
+        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 402, 16, sf::Color(200, 200, 150), true);
+        drawText(L"\u672c\u673aIP:", 830, 428, 14, sf::Color(180, 180, 180), true);
+        drawText(localIP, 830, 450, 16, sf::Color(100, 255, 100), true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1929,21 +1905,21 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 605;
+        disconnectBtn.bounds.top = 480;
         drawNetBtn(disconnectBtn);
     } else if (netState == NetState::CONNECTED) {
         sf::RectangleShape statusBg(sf::Vector2f(190, 80));
-        statusBg.setPosition(735, 495);
+        statusBg.setPosition(735, 382);
         statusBg.setFillColor(sf::Color(40, 60, 40));
         statusBg.setOutlineColor(sf::Color(80, 120, 80));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u5df2\u8fde\u63a5", 830, 515, 20, sf::Color(100, 255, 100), true);
+        drawText(L"\u5df2\u8fde\u63a5", 830, 402, 18, sf::Color(100, 255, 100), true);
 
         std::wstring sideText = (netSide == Side::RED) ? L"\u4f60\u662f\u7ea2\u65b9" : L"\u4f60\u662f\u9ed1\u65b9";
         sf::Color sideColor = (netSide == Side::RED) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200);
-        drawText(sideText, 830, 550, 18, sideColor, true);
+        drawText(sideText, 830, 435, 16, sideColor, true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1965,7 +1941,7 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 585;
+        disconnectBtn.bounds.top = 470;
         drawNetBtn(disconnectBtn);
     }
 }
