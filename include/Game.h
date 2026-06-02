@@ -131,6 +131,8 @@ private:
     void sendMove(int fromR, int fromC, int toR, int toC);
     void sendUndoRequest();
     void sendUndoResponse(bool accept);
+    void sendRestartRequest();
+    void sendRestartResponse(bool accept);
     void doOnlineUndo();
     void pollNetwork();
     void disconnectNetwork();
@@ -177,6 +179,8 @@ private:
 
     UIButton undoAcceptBtn;
     UIButton undoRejectBtn;
+    UIButton restartAcceptBtn;
+    UIButton restartRejectBtn;
 
     NetState netState;
     sf::TcpListener listener;
@@ -189,6 +193,8 @@ private:
     bool receivingMove;
     bool undoRequestSent;
     bool undoRequestReceived;
+    bool restartRequestSent;
+    bool restartRequestReceived;
     Side undoRequesterSide;
 
     bool aiMode;

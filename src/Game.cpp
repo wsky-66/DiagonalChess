@@ -30,6 +30,8 @@ Game::Game()
     , receivingMove(false)
     , undoRequestSent(false)
     , undoRequestReceived(false)
+    , restartRequestSent(false)
+    , restartRequestReceived(false)
 {
     window.setFramerateLimit(60);
 
@@ -51,6 +53,8 @@ Game::Game()
     gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91cd\u65b0\u5f00\u59cb", false, false};
     undoAcceptBtn = {sf::FloatRect(735, 240, 90, 44), L"\u540c\u610f", false, false};
     undoRejectBtn = {sf::FloatRect(835, 240, 90, 44), L"\u62d2\u7edd", false, false};
+    restartAcceptBtn = {sf::FloatRect(735, 295, 90, 44), L"\u540c\u610f", false, false};
+    restartRejectBtn = {sf::FloatRect(835, 295, 90, 44), L"\u62d2\u7edd", false, false};
 
     placePieces();
     initSounds();
@@ -108,6 +112,8 @@ void Game::processEvents() {
             disconnectBtn.hovered = disconnectBtn.bounds.contains(mx, my);
             undoAcceptBtn.hovered = undoAcceptBtn.bounds.contains(mx, my);
             undoRejectBtn.hovered = undoRejectBtn.bounds.contains(mx, my);
+            restartAcceptBtn.hovered = restartAcceptBtn.bounds.contains(mx, my);
+            restartRejectBtn.hovered = restartRejectBtn.bounds.contains(mx, my);
         }
 
         if (event.type == sf::Event::TextEntered && showIPInput) {
@@ -144,6 +150,8 @@ void Game::update(float dt) {
             aiBtn.label = L"AI: \u5173\u95ed";
             undoRequestSent = false;
             undoRequestReceived = false;
+            restartRequestSent = false;
+            restartRequestReceived = false;
             restartGame();
         }
     }
@@ -160,6 +168,16 @@ void Game::update(float dt) {
     } else {
         undoBtn.label = L"\u6094\u68cb";
         undoBtn.disabled = false;
+    }
+
+    if (restartRequestSent) {
+        restartBtn.label = L"\u7b49\u5f85\u540c\u610f...";
+        restartBtn.disabled = true;
+    } else if (restartRequestReceived) {
+        restartBtn.disabled = true;
+    } else {
+        restartBtn.label = L"\u91cd\u65b0\u5f00\u59cb";
+        restartBtn.disabled = false;
     }
 
     if (aiMode && !netMode && currentTurn == aiSide && !gameOver) {
@@ -490,6 +508,7 @@ void Game::handleButtonClick(float mx, float my) {
     if (undoBtn.bounds.contains(mx, my) && !undoBtn.disabled) {
         if (netState == NetState::CONNECTED) {
             if (!undoRequestSent && moveHistory.size() >= 1) {
+                undoRequesterSide = netSide;
                 sendUndoRequest();
                 undoRequestSent = true;
             }
@@ -497,8 +516,28 @@ void Game::handleButtonClick(float mx, float my) {
             undoMove();
         }
         playClickSound();
-    } else if (restartBtn.bounds.contains(mx, my) && !restartBtn.disabled) {
+    } else     if (restartAcceptBtn.bounds.contains(mx, my) && restartRequestReceived) {
+        sendRestartResponse(true);
         restartGame();
+        restartRequestReceived = false;
+        playClickSound();
+        return;
+    }
+    if (restartRejectBtn.bounds.contains(mx, my) && restartRequestReceived) {
+        sendRestartResponse(false);
+        restartRequestReceived = false;
+        playClickSound();
+        return;
+    }
+    if (restartBtn.bounds.contains(mx, my) && !restartBtn.disabled) {
+        if (netState == NetState::CONNECTED) {
+            if (!restartRequestSent) {
+                sendRestartRequest();
+                restartRequestSent = true;
+            }
+        } else {
+            restartGame();
+        }
         playClickSound();
     } else if (aiBtn.bounds.contains(mx, my) && !aiBtn.disabled) {
         aiMode = !aiMode;
@@ -650,6 +689,8 @@ void Game::restartGame() {
     validMoves.clear();
     undoRequestSent = false;
     undoRequestReceived = false;
+    restartRequestSent = false;
+    restartRequestReceived = false;
 }
 
 void Game::checkGameEnd() {
@@ -1136,6 +1177,42 @@ void Game::drawButtons() {
         undoRejectBtn.bounds.top = 275;
         drawSmallBtn(undoAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(undoRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
+    }
+
+    if (restartRequestReceived) {
+        sf::RectangleShape bg(sf::Vector2f(190, 70));
+        bg.setPosition(735, 285);
+        bg.setFillColor(sf::Color(180, 130, 30, 220));
+        bg.setOutlineColor(sf::Color(255, 180, 50));
+        bg.setOutlineThickness(2);
+        window.draw(bg);
+
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u91cd\u5f00", 830, 310, 17, sf::Color(255, 255, 200), true);
+
+        auto drawSmallBtnR = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
+            sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+            rect.setPosition(btn.bounds.left, btn.bounds.top);
+            rect.setFillColor(btn.hovered ? sf::Color(fill.r + 40, fill.g + 30, fill.b + 20) : fill);
+            rect.setOutlineColor(outline);
+            rect.setOutlineThickness(2);
+            window.draw(rect);
+
+            sf::Text t;
+            t.setFont(font);
+            t.setString(btn.label);
+            t.setCharacterSize(16);
+            t.setFillColor(sf::Color(255, 255, 255));
+            sf::FloatRect bounds = t.getLocalBounds();
+            t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+            t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                         btn.bounds.top + btn.bounds.height / 2.f);
+            window.draw(t);
+        };
+
+        restartAcceptBtn.bounds.top = 330;
+        restartRejectBtn.bounds.top = 330;
+        drawSmallBtnR(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
+        drawSmallBtnR(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 }
 
@@ -1628,6 +1705,8 @@ void Game::startHost() {
         netSide = Side::RED;
         undoRequestSent = false;
         undoRequestReceived = false;
+        restartRequestSent = false;
+        restartRequestReceived = false;
     }
 }
 
@@ -1644,6 +1723,8 @@ void Game::startClient() {
         showIPInput = false;
         undoRequestSent = false;
         undoRequestReceived = false;
+        restartRequestSent = false;
+        restartRequestReceived = false;
         restartGame();
     } else {
         showIPInput = true;
@@ -1665,6 +1746,18 @@ void Game::sendUndoRequest() {
 void Game::sendUndoResponse(bool accept) {
     sf::Packet packet;
     packet << (accept ? 2 : 3);
+    socket.send(packet);
+}
+
+void Game::sendRestartRequest() {
+    sf::Packet packet;
+    packet << 4;
+    socket.send(packet);
+}
+
+void Game::sendRestartResponse(bool accept) {
+    sf::Packet packet;
+    packet << (accept ? 5 : 6);
     socket.send(packet);
 }
 
@@ -1712,6 +1805,13 @@ void Game::pollNetwork() {
             undoRequestSent = false;
         } else if (msgType == 3) {
             undoRequestSent = false;
+        } else if (msgType == 4) {
+            restartRequestReceived = true;
+        } else if (msgType == 5) {
+            restartGame();
+            restartRequestSent = false;
+        } else if (msgType == 6) {
+            restartRequestSent = false;
         }
     } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
         disconnectNetwork();
