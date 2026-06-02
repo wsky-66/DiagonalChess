@@ -489,7 +489,7 @@ void Game::handleButtonClick(float mx, float my) {
     }
     if (undoBtn.bounds.contains(mx, my) && !undoBtn.disabled) {
         if (netState == NetState::CONNECTED) {
-            if (!undoRequestSent && moveHistory.size() >= 2) {
+            if (!undoRequestSent && moveHistory.size() >= 1) {
                 sendUndoRequest();
                 undoRequestSent = true;
             }
@@ -1669,15 +1669,13 @@ void Game::sendUndoResponse(bool accept) {
 }
 
 void Game::doOnlineUndo() {
-    if (moveHistory.size() < 2) return;
-    for (int i = 0; i < 2; i++) {
-        MoveRecord record = moveHistory.top();
-        moveHistory.pop();
-        board[record.fromR][record.fromC] = record.movedPiece;
-        board[record.toR][record.toC] = record.capturedPiece;
-        currentTurn = record.side;
-        if (!moveLogStrings.empty()) moveLogStrings.pop_back();
-    }
+    if (moveHistory.empty()) return;
+    MoveRecord record = moveHistory.top();
+    moveHistory.pop();
+    board[record.fromR][record.fromC] = record.movedPiece;
+    board[record.toR][record.toC] = record.capturedPiece;
+    currentTurn = record.side;
+    if (!moveLogStrings.empty()) moveLogStrings.pop_back();
     pieceSelected = false;
     validMoves.clear();
     if (gameOver) {
