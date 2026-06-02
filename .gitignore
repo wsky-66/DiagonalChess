@@ -1,0 +1,12 @@
+# Build output
+build/
+out/
+.vs/
+
+# Executables and DLLs
+*.exe
+*.dll
+
+# Release package
+release/
+release.rar
