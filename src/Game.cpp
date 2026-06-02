@@ -6,7 +6,7 @@
 
 Game::Game()
     : window(sf::VideoMode(Game::WIN_W, Game::WIN_H), L"\u5bf9\u89d2\u8c61\u68cb",
-             sf::Style::Titlebar | sf::Style::Close)
+             sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize)
     , currentTurn(Side::RED)
     , selectedR(-1), selectedC(-1)
     , pieceSelected(false)
@@ -23,6 +23,7 @@ Game::Game()
     , aiThinking(false)
     , aiDelayTimer(0.f)
     , soundsLoaded(false)
+    , showTutorial(false)
     , netState(NetState::OFFLINE)
     , showIPInput(false)
     , netMode(false)
@@ -34,6 +35,7 @@ Game::Game()
     , restartRequestReceived(false)
 {
     window.setFramerateLimit(60);
+    view = window.getDefaultView();
 
     if (font.loadFromFile("C:/Windows/Fonts/simhei.ttf") ||
         font.loadFromFile("C:/Windows/Fonts/msyh.ttc") ||
@@ -55,6 +57,7 @@ Game::Game()
     undoRejectBtn = {sf::FloatRect(835, 240, 90, 44), L"\u62d2\u7edd", false, false};
     restartAcceptBtn = {sf::FloatRect(735, 295, 90, 44), L"\u540c\u610f", false, false};
     restartRejectBtn = {sf::FloatRect(835, 295, 90, 44), L"\u62d2\u7edd", false, false};
+    tutorialBtn = {sf::FloatRect(735, 490, 190, 44), L"\u65b0\u624b\u6559\u7a0b", false, false};
 
     placePieces();
     initSounds();
@@ -79,6 +82,18 @@ void Game::processEvents() {
     while (window.pollEvent(event)) {
         if (event.type == sf::Event::Closed)
             window.close();
+
+        if (event.type == sf::Event::Resized) {
+            float ratio = (float)event.size.height / event.size.width;
+            float baseRatio = (float)Game::WIN_H / Game::WIN_W;
+            if (ratio > baseRatio) {
+                float nh = event.size.width * baseRatio;
+                view.setViewport(sf::FloatRect(0, (1.f - nh / event.size.height) / 2.f, 1.f, nh / event.size.height));
+            } else {
+                float nw = event.size.height / baseRatio;
+                view.setViewport(sf::FloatRect((1.f - nw / event.size.width) / 2.f, 0, nw / event.size.width, 1.f));
+            }
+        }
 
         if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
             float mx = static_cast<float>(event.mouseButton.x);
@@ -114,6 +129,7 @@ void Game::processEvents() {
             undoRejectBtn.hovered = undoRejectBtn.bounds.contains(mx, my);
             restartAcceptBtn.hovered = restartAcceptBtn.bounds.contains(mx, my);
             restartRejectBtn.hovered = restartRejectBtn.bounds.contains(mx, my);
+            tutorialBtn.hovered = tutorialBtn.bounds.contains(mx, my);
         }
 
         if (event.type == sf::Event::TextEntered && showIPInput) {
@@ -196,6 +212,7 @@ void Game::update(float dt) {
 }
 
 void Game::render() {
+    window.setView(view);
     sf::Color bgColor(40, 32, 22);
     window.clear(bgColor);
 
@@ -218,6 +235,7 @@ void Game::render() {
     drawPieces();
     drawUI();
     drawButtons();
+    if (showTutorial) drawTutorialPanel();
     drawNetUI();
     drawMoveLog();
 
@@ -573,19 +591,8 @@ void Game::handleButtonClick(float mx, float my) {
             showIPInput = false;
         }
         playClickSound();
-    } else if (netMode && hostBtn.bounds.contains(mx, my) && netState == NetState::OFFLINE) {
-        startHost();
-        playClickSound();
-    } else if (netMode && joinBtn.bounds.contains(mx, my) && netState == NetState::OFFLINE) {
-        showIPInput = true;
-        inputIP.clear();
-        playClickSound();
-    } else if (netMode && connectBtn.bounds.contains(mx, my) && showIPInput && !inputIP.empty()) {
-        startClient();
-        playClickSound();
-    } else if (netMode && disconnectBtn.bounds.contains(mx, my) && netState != NetState::OFFLINE) {
-        disconnectNetwork();
-        showIPInput = false;
+    } else if (tutorialBtn.bounds.contains(mx, my) && !tutorialBtn.disabled) {
+        showTutorial = !showTutorial;
         playClickSound();
     }
 }
@@ -1149,6 +1156,7 @@ void Game::drawButtons() {
     drawBtn(aiBtn);
     drawBtn(difficultyBtn);
     drawBtn(onlineBtn);
+    drawBtn(tutorialBtn);
 
     if (undoRequestReceived) {
         sf::RectangleShape bg(sf::Vector2f(190, 70));
@@ -1591,10 +1599,10 @@ std::vector<AIMove> Game::generateAllMoves(const Piece b[9][9], Side side) const
                         m.toR = tr; m.toC = tc;
                         m.score = 0;
                         moves.push_back(m);
-                    }
                 }
             }
         }
+    }
     }
     return moves;
 }
@@ -1959,5 +1967,53 @@ void Game::drawNetUI() {
 
         disconnectBtn.bounds.top = 585;
         drawNetBtn(disconnectBtn);
+    }
+}
+
+void Game::drawTutorialPanel() {
+    if (!fontLoaded) return;
+    
+    sf::RectangleShape bg(sf::Vector2f(420, 730));
+    bg.setPosition(715, 10);
+    bg.setFillColor(sf::Color(45, 35, 22, 245));
+    bg.setOutlineColor(sf::Color(120, 100, 70));
+    bg.setOutlineThickness(2);
+    window.draw(bg);
+    
+    sf::RectangleShape header(sf::Vector2f(420, 35));
+    header.setPosition(715, 10);
+    header.setFillColor(sf::Color(70, 56, 40));
+    window.draw(header);
+    drawTextWithShadow(L"\u65b0\u624b\u6559\u7a0b", 925, 27, 20, sf::Color(255, 220, 150), true);
+    
+    const wchar_t* lines[] = {
+        L"\u3010\u68cb\u76d8\u3011 9x9\u4ea4\u70b9\uff0c\u68cb\u76d8\u659c\u653e\uff0c",
+        L"\u53cc\u65b9\u5404\u6709\u4e00\u4e2a\u4e5d\u5bab\uff083x3\uff09\u3002",
+        L"",
+        L"\u3010\u8d70\u6cd5\u3011",
+        L"\u5c06/\u5e05\uff1a\u6a2a\u7ad6\u4e00\u6b65\uff0c\u4e0d\u51fa\u4e5d\u5bab\u3002",
+        L"\u58eb/\u4ed5\uff1a\u516b\u65b9\u5411\u4e00\u6b65\uff0c\u4e0d\u51fa\u4e5d\u5bab\u3002",
+        L"\u8c61/\u76f8\uff1a\u8d70\u7530\u5b57\u00b12\u00b12\uff0c\u53ef\u8fc7\u6cb3\u3002",
+        L"\u9a6c\uff1a\u8d70\u65e5\u5b57\uff0c\u8e6b\u9a6c\u817f\u3002",
+        L"\u8f66\uff1a\u6a2a\u7ad6\u65e0\u9650\uff0c\u4e0d\u8d8a\u5b50\u3002",
+        L"\u70ae\uff1a\u79fb\u52a8\u5982\u8f66\uff0c\u5403\u5b50\u5fc5\u987b\u9694\u4e00\u5b50\u3002",
+        L"\u5175/\u5352\uff1a\u659c\u524d\u4e00\u6b65\uff0c\u4e0d\u540e\u9000\u3002",
+        L"",
+        L"\u3010\u80dc\u8d1f\u3011\u5403\u6389\u5bf9\u65b9\u5c06/\u5e05\u5373\u80dc\u3002",
+        L"\u3010\u548c\u68cb\u3011120\u6b65\u65e0\u5403\u5b50\u6216\u5b50\u529b\u4e0d\u8db3\u3002",
+        L"",
+        L"\u3010\u8054\u673a\u3011\u540cWiFi\u4e0b\uff0c\u4e00\u4eba\u521b\u5efa\u623f\u95f4\uff0c",
+        L"\u53e6\u4e00\u4eba\u8f93\u5165IP\u52a0\u5165\u3002\u4e3b\u673a\u6267\u7ea2\u5148\u624b\u3002",
+        L"",
+        L"\u3010AI\u3011\u70b9\u51fbAI\u5f00\u5173\u542f\u7528\uff0c\u4e09\u6863\u96be\u5ea6\u3002",
+        L"\u3010\u614c\u68cb\u3011\u8054\u673a\u65f6\u9700\u53cc\u65b9\u540c\u610f\u3002",
+    };
+    
+    float y = 55;
+    for (const auto& line : lines) {
+        bool isHeader = (wcslen(line) > 0 && line[0] == L'\u3010');
+        drawText(line, 730, y, isHeader ? 17 : 15, 
+                 isHeader ? sf::Color(255, 200, 100) : sf::Color(210, 200, 180));
+        y += isHeader ? 28 : 22;
     }
 }

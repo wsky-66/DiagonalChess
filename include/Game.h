@@ -136,6 +136,7 @@ private:
     void disconnectNetwork();
     std::wstring getLocalIP() const;
     void drawNetUI();
+    void drawTutorialPanel();
 
     void doAITurn();
     std::vector<AIMove> generateAllMoves(const Piece b[9][9], Side side) const;
@@ -162,7 +163,9 @@ private:
 
     sf::RenderWindow window;
     sf::Font font;
+    sf::View view;
     bool fontLoaded;
+    bool showTutorial;
 
     UIButton undoBtn;
     UIButton restartBtn;
@@ -174,11 +177,11 @@ private:
     UIButton joinBtn;
     UIButton connectBtn;
     UIButton disconnectBtn;
-
     UIButton undoAcceptBtn;
     UIButton undoRejectBtn;
     UIButton restartAcceptBtn;
     UIButton restartRejectBtn;
+    UIButton tutorialBtn;
 
     NetState netState;
     sf::TcpListener listener;
