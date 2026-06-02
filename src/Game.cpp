@@ -36,15 +36,15 @@ Game::Game()
         fontLoaded = true;
     }
 
-    undoBtn = {sf::FloatRect(735, 240, 190, 48), L"\u6094\u68cb", false, false};
-    restartBtn = {sf::FloatRect(735, 300, 190, 48), L"\u91cd\u65b0\u5f00\u59cb", false, false};
-    aiBtn = {sf::FloatRect(735, 360, 190, 48), L"AI: \u5173\u95ed", false, false};
-    difficultyBtn = {sf::FloatRect(735, 420, 190, 48), L"\u96be\u5ea6: \u4e2d\u7b49", false, false};
-    onlineBtn = {sf::FloatRect(735, 480, 190, 48), L"\u8054\u673a: \u5173\u95ed", false, false};
-    hostBtn = {sf::FloatRect(735, 540, 190, 48), L"\u521b\u5efa\u623f\u95f4", false, false};
-    joinBtn = {sf::FloatRect(735, 600, 190, 48), L"\u52a0\u5165\u623f\u95f4", false, false};
-    connectBtn = {sf::FloatRect(735, 660, 190, 48), L"\u8fde\u63a5", false, false};
-    disconnectBtn = {sf::FloatRect(735, 540, 190, 48), L"\u65ad\u5f00\u8fde\u63a5", false, false};
+    undoBtn = {sf::FloatRect(735, 240, 190, 44), L"\u6094\u68cb", false, false};
+    restartBtn = {sf::FloatRect(735, 290, 190, 44), L"\u91cd\u65b0\u5f00\u59cb", false, false};
+    aiBtn = {sf::FloatRect(735, 340, 190, 44), L"AI: \u5173\u95ed", false, false};
+    difficultyBtn = {sf::FloatRect(735, 390, 190, 44), L"\u96be\u5ea6: \u4e2d\u7b49", false, false};
+    onlineBtn = {sf::FloatRect(735, 440, 190, 44), L"\u8054\u673a: \u5173\u95ed", false, false};
+    hostBtn = {sf::FloatRect(735, 495, 190, 44), L"\u521b\u5efa\u623f\u95f4", false, false};
+    joinBtn = {sf::FloatRect(735, 545, 190, 44), L"\u52a0\u5165\u623f\u95f4", false, false};
+    connectBtn = {sf::FloatRect(735, 640, 190, 44), L"\u8fde\u63a5", false, false};
+    disconnectBtn = {sf::FloatRect(735, 495, 190, 44), L"\u65ad\u5f00\u8fde\u63a5", false, false};
     gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91cd\u65b0\u5f00\u59cb", false, false};
 
     placePieces();
@@ -1044,7 +1044,7 @@ void Game::drawButtons() {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(20);
+            t.setCharacterSize(18);
             sf::Color textColor = btn.disabled ? sf::Color(110, 100, 88) : sf::Color(245, 235, 220);
             t.setFillColor(textColor);
             sf::FloatRect bounds = t.getLocalBounds();
@@ -1065,9 +1065,9 @@ void Game::drawButtons() {
 void Game::drawMoveLog() {
     if (!fontLoaded) return;
 
-    float logY = netMode ? 730.f : 490.f;
-    float logH = netMode ? 80.f : 330.f;
-    int maxLines = netMode ? 3 : Game::MAX_LOG;
+    float logY = netMode ? 700.f : 490.f;
+    float logH = netMode ? 110.f : 330.f;
+    int maxLines = netMode ? 4 : Game::MAX_LOG;
 
     sf::RectangleShape logBg(sf::Vector2f(420, logH));
     logBg.setPosition(715, logY);
@@ -1606,8 +1606,6 @@ void Game::drawNetUI() {
     if (!fontLoaded) return;
     if (!netMode) return;
 
-    float y = 540;
-
     if (netState == NetState::OFFLINE) {
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape shadow(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1626,7 +1624,7 @@ void Game::drawNetUI() {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(20);
+            t.setCharacterSize(18);
             t.setFillColor(sf::Color(230, 255, 230));
             sf::FloatRect bounds = t.getLocalBounds();
             t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
@@ -1640,7 +1638,7 @@ void Game::drawNetUI() {
 
         if (showIPInput) {
             sf::RectangleShape inputBg(sf::Vector2f(190, 35));
-            inputBg.setPosition(735, 660);
+            inputBg.setPosition(735, 595);
             inputBg.setFillColor(sf::Color(40, 35, 28));
             inputBg.setOutlineColor(sf::Color(120, 100, 80));
             inputBg.setOutlineThickness(2);
@@ -1648,21 +1646,21 @@ void Game::drawNetUI() {
 
             std::wstring displayIP = inputIP.empty() ? L"\u8f93\u5165IP\u5730\u5740..." : inputIP;
             sf::Color ipColor = inputIP.empty() ? sf::Color(120, 110, 100) : sf::Color(240, 230, 220);
-            drawText(displayIP, 745, 677, 16, ipColor);
+            drawText(displayIP, 745, 602, 15, ipColor);
 
             drawNetBtn(connectBtn);
         }
     } else if (netState == NetState::HOST_WAITING) {
         sf::RectangleShape statusBg(sf::Vector2f(190, 100));
-        statusBg.setPosition(735, 540);
+        statusBg.setPosition(735, 495);
         statusBg.setFillColor(sf::Color(50, 45, 35));
         statusBg.setOutlineColor(sf::Color(80, 70, 55));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 560, 18, sf::Color(200, 200, 150), true);
-        drawText(L"\u672c\u673aIP:", 830, 590, 14, sf::Color(180, 180, 180), true);
-        drawText(localIP, 830, 615, 16, sf::Color(100, 255, 100), true);
+        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 515, 18, sf::Color(200, 200, 150), true);
+        drawText(L"\u672c\u673aIP:", 830, 545, 14, sf::Color(180, 180, 180), true);
+        drawText(localIP, 830, 570, 16, sf::Color(100, 255, 100), true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1675,7 +1673,7 @@ void Game::drawNetUI() {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(20);
+            t.setCharacterSize(18);
             t.setFillColor(sf::Color(255, 220, 220));
             sf::FloatRect bounds = t.getLocalBounds();
             t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
@@ -1684,21 +1682,21 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 650;
+        disconnectBtn.bounds.top = 605;
         drawNetBtn(disconnectBtn);
     } else if (netState == NetState::CONNECTED) {
         sf::RectangleShape statusBg(sf::Vector2f(190, 80));
-        statusBg.setPosition(735, 540);
+        statusBg.setPosition(735, 495);
         statusBg.setFillColor(sf::Color(40, 60, 40));
         statusBg.setOutlineColor(sf::Color(80, 120, 80));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u5df2\u8fde\u63a5", 830, 560, 20, sf::Color(100, 255, 100), true);
+        drawText(L"\u5df2\u8fde\u63a5", 830, 515, 20, sf::Color(100, 255, 100), true);
 
         std::wstring sideText = (netSide == Side::RED) ? L"\u4f60\u662f\u7ea2\u65b9" : L"\u4f60\u662f\u9ed1\u65b9";
         sf::Color sideColor = (netSide == Side::RED) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200);
-        drawText(sideText, 830, 595, 18, sideColor, true);
+        drawText(sideText, 830, 550, 18, sideColor, true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1711,7 +1709,7 @@ void Game::drawNetUI() {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(20);
+            t.setCharacterSize(18);
             t.setFillColor(sf::Color(255, 220, 220));
             sf::FloatRect bounds = t.getLocalBounds();
             t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
@@ -1720,7 +1718,7 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 630;
+        disconnectBtn.bounds.top = 585;
         drawNetBtn(disconnectBtn);
     }
 }
