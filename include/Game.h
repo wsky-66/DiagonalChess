@@ -129,6 +129,9 @@ private:
     void startHost();
     void startClient();
     void sendMove(int fromR, int fromC, int toR, int toC);
+    void sendUndoRequest();
+    void sendUndoResponse(bool accept);
+    void doOnlineUndo();
     void pollNetwork();
     void disconnectNetwork();
     std::wstring getLocalIP() const;
@@ -172,6 +175,9 @@ private:
     UIButton connectBtn;
     UIButton disconnectBtn;
 
+    UIButton undoAcceptBtn;
+    UIButton undoRejectBtn;
+
     NetState netState;
     sf::TcpListener listener;
     sf::TcpSocket socket;
@@ -181,6 +187,8 @@ private:
     Side netSide;
     bool netMode;
     bool receivingMove;
+    bool undoRequestSent;
+    bool undoRequestReceived;
 
     bool aiMode;
     Side aiSide;
