@@ -539,6 +539,11 @@ void Game::handleBoardClick(int r, int c) {
 }
 
 void Game::handleButtonClick(float mx, float my) {
+    if (showTutorial && mx >= 1088 && mx <= 1128 && my >= 394 && my <= 418) {
+        showTutorial = false;
+        playClickSound();
+        return;
+    }
     if (undoAcceptBtn.bounds.contains(mx, my) && undoRequestReceived) {
         sf::Packet pkt;
         pkt << 2;
@@ -1161,14 +1166,14 @@ void Game::drawButtons() {
         }
         rect.setFillColor(fillColor);
         rect.setOutlineColor(outlineColor);
-        rect.setOutlineThickness(2);
+        rect.setOutlineThickness(3);
         window.draw(rect);
 
         if (fontLoaded) {
             sf::Text t;
             t.setFont(font);
             t.setString(btn.label);
-            t.setCharacterSize(17);
+            t.setCharacterSize(18);
             sf::Color textColor = btn.disabled ? sf::Color(110, 100, 88) : sf::Color(245, 235, 220);
             t.setFillColor(textColor);
             sf::FloatRect bounds = t.getLocalBounds();
@@ -1979,18 +1984,26 @@ void Game::drawNetUI() {
 void Game::drawTutorialPanel() {
     if (!fontLoaded) return;
     
-    sf::RectangleShape bg(sf::Vector2f(420, 730));
-    bg.setPosition(715, 10);
+    sf::RectangleShape bg(sf::Vector2f(420, 400));
+    bg.setPosition(715, 390);
     bg.setFillColor(sf::Color(45, 35, 22, 245));
     bg.setOutlineColor(sf::Color(120, 100, 70));
     bg.setOutlineThickness(2);
     window.draw(bg);
     
-    sf::RectangleShape header(sf::Vector2f(420, 35));
-    header.setPosition(715, 10);
+    sf::RectangleShape header(sf::Vector2f(420, 32));
+    header.setPosition(715, 390);
     header.setFillColor(sf::Color(70, 56, 40));
     window.draw(header);
-    drawTextWithShadow(L"\u65b0\u624b\u6559\u7a0b", 925, 27, 20, sf::Color(255, 220, 150), true);
+    drawTextWithShadow(L"\u65b0\u624b\u6559\u7a0b", 880, 406, 18, sf::Color(255, 220, 150), true);
+    
+    sf::RectangleShape closeBtn(sf::Vector2f(40, 24));
+    closeBtn.setPosition(1088, 394);
+    closeBtn.setFillColor(sf::Color(160, 50, 50));
+    closeBtn.setOutlineColor(sf::Color(200, 80, 80));
+    closeBtn.setOutlineThickness(2);
+    window.draw(closeBtn);
+    drawTextWithShadow(L"\u2716", 1108, 406, 16, sf::Color::White, true);
     
     const wchar_t* lines[] = {
         L"\u3010\u68cb\u76d8\u3011 9x9\u4ea4\u70b9\uff0c\u68cb\u76d8\u659c\u653e\uff0c",
@@ -2010,16 +2023,15 @@ void Game::drawTutorialPanel() {
         L"",
         L"\u3010\u8054\u673a\u3011\u540cWiFi\u4e0b\uff0c\u4e00\u4eba\u521b\u5efa\u623f\u95f4\uff0c",
         L"\u53e6\u4e00\u4eba\u8f93\u5165IP\u52a0\u5165\u3002\u4e3b\u673a\u6267\u7ea2\u5148\u624b\u3002",
-        L"",
-        L"\u3010AI\u3011\u70b9\u51fbAI\u5f00\u5173\u542f\u7528\uff0c\u4e09\u6863\u96be\u5ea6\u3002",
+        L"\u3010AI\u3011\u4e09\u6863\u96be\u5ea6\uff0c\u8054\u673a\u65f6\u81ea\u52a8\u5173\u95ed\u3002",
         L"\u3010\u614c\u68cb\u3011\u8054\u673a\u65f6\u9700\u53cc\u65b9\u540c\u610f\u3002",
     };
     
-    float y = 55;
+    float y = 430;
     for (const auto& line : lines) {
         bool isHeader = (wcslen(line) > 0 && line[0] == L'\u3010');
-        drawText(line, 730, y, isHeader ? 17 : 15, 
+        drawText(line, 730, y, isHeader ? 16 : 14, 
                  isHeader ? sf::Color(255, 200, 100) : sf::Color(210, 200, 180));
-        y += isHeader ? 28 : 22;
+        y += isHeader ? 26 : 21;
     }
 }
