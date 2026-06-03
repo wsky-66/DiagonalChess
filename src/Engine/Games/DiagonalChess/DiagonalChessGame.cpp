@@ -53,6 +53,7 @@ void DiagonalChessGame::SetupNetworkCallbacks() {
     network.onRestartRequestReceived = [this]() {};
 
     network.onUndoAccepted = [this](int steps) {
+        if (gameOver || moveHistory.empty()) return;
         if (steps == 1) {
             int actualSteps = (moveHistory.top().side == network.GetNetSide()) ? 1 : 2;
             ApplyUndoSteps(actualSteps);
@@ -62,9 +63,9 @@ void DiagonalChessGame::SetupNetworkCallbacks() {
         }
     };
 
-    network.onRestartAccepted = [this]() { RestartGame(); };
-    network.onSurrenderAccepted = [this]() { DoSurrender(network.GetNetSide()); };
-    network.onDrawAccepted = [this]() { DoDraw(); };
+    network.onRestartAccepted = [this]() { if (!gameOver) RestartGame(); };
+    network.onSurrenderAccepted = [this]() { if (!gameOver) DoSurrender(network.GetNetSide()); };
+    network.onDrawAccepted = [this]() { if (!gameOver) DoDraw(); };
 
     network.onRejected = [this](const std::wstring& msg) {
         ui.SetNotification(msg, 3.f);
