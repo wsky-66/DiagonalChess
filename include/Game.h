@@ -161,6 +161,7 @@ private:
     bool gameOver;
     Side winner;
     bool isDrawGame;
+    bool surrendered;
     float gameOverTimer;
 
     std::stack<MoveRecord> moveHistory;

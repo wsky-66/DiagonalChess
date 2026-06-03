@@ -13,6 +13,7 @@ Game::Game()
     , gameOver(false)
     , winner(Side::RED)
     , isDrawGame(false)
+    , surrendered(false)
     , gameOverTimer(0.f)
     , movesWithoutCapture(0)
     , fontLoaded(false)
@@ -372,6 +373,7 @@ void Game::placePieces() {
     pieceSelected = false;
     gameOver = false;
     isDrawGame = false;
+    surrendered = false;
     gameOverTimer = 0.f;
     movesWithoutCapture = 0;
     while (!moveHistory.empty()) moveHistory.pop();
@@ -823,6 +825,7 @@ void Game::doSurrender(Side side) {
     gameOver = true;
     winner = (side == Side::RED) ? Side::BLACK : Side::RED;
     isDrawGame = false;
+    surrendered = true;
     gameOverTimer = 0.f;
     createWinParticles(winner);
     if (winner == Side::RED) {
@@ -1203,14 +1206,18 @@ void Game::drawUI() {
             turnColor = sf::Color(220, 220, 120);
             indicatorColor = sf::Color(200, 200, 100);
         } else {
-            if (isCheckmate((winner == Side::RED) ? Side::BLACK : Side::RED)) {
+            if (surrendered) {
+                turnText = L"\u8ba4\u8f93";
+                turnColor = sf::Color(255, 150, 100);
+                indicatorColor = sf::Color(255, 150, 100);
+            } else if (isCheckmate((winner == Side::RED) ? Side::BLACK : Side::RED)) {
                 turnText = L"\u7edd\u6740\uff01";
                 turnColor = sf::Color(255, 215, 0);
                 indicatorColor = sf::Color(255, 215, 0);
             } else {
-                turnText = (winner == Side::RED) ? L"\u7ea2\u65b9\u80dc\u5229\uff01" : L"\u9ed1\u65b9\u80dc\u5229\uff01";
-                turnColor = (winner == Side::RED) ? sf::Color(255, 100, 100) : sf::Color(200, 200, 200);
-                indicatorColor = turnColor;
+                turnText = L"\u56f0\u6bd9\uff01";
+                turnColor = sf::Color(255, 180, 50);
+                indicatorColor = sf::Color(255, 180, 50);
             }
         }
     } else {
@@ -1426,16 +1433,20 @@ void Game::drawGameOverEffect() {
             }
         } else {
             Side loser = (winner == Side::RED) ? Side::BLACK : Side::RED;
-            if (isCheckmate(loser)) {
-                mainText = L"\u7edd\u6740";
-                mainColor = sf::Color(255, 215, 0, static_cast<sf::Uint8>(textAlpha));
-                subText = (winner == Side::RED) ? L"\u7ea2\u65b9\u7edd\u6740\u9ed1\u65b9" : L"\u9ed1\u65b9\u7edd\u6740\u7ea2\u65b9";
-            } else {
+            if (surrendered) {
                 mainText = (winner == Side::RED) ? L"\u7ea2\u65b9\u80dc\u5229" : L"\u9ed1\u65b9\u80dc\u5229";
                 mainColor = (winner == Side::RED) ?
                     sf::Color(255, 80, 80, static_cast<sf::Uint8>(textAlpha)) :
                     sf::Color(220, 220, 220, static_cast<sf::Uint8>(textAlpha));
-                subText = L"\u56f0\u6bd9\u80dc\u5229";
+                subText = (loser == Side::RED) ? L"\u7ea2\u65b9\u8ba4\u8f93" : L"\u9ed1\u65b9\u8ba4\u8f93";
+            } else if (isCheckmate(loser)) {
+                mainText = L"\u7edd\u6740";
+                mainColor = sf::Color(255, 215, 0, static_cast<sf::Uint8>(textAlpha));
+                subText = (winner == Side::RED) ? L"\u7ea2\u65b9\u7edd\u6740\u9ed1\u65b9" : L"\u9ed1\u65b9\u7edd\u6740\u7ea2\u65b9";
+            } else {
+                mainText = L"\u56f0\u6bd9";
+                mainColor = sf::Color(255, 180, 50, static_cast<sf::Uint8>(textAlpha));
+                subText = (loser == Side::RED) ? L"\u7ea2\u65b9\u88ab\u56f0\u6bd9" : L"\u9ed1\u65b9\u88ab\u56f0\u6bd9";
             }
         }
 
