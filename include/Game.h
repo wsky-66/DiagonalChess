@@ -226,6 +226,8 @@ private:
     Side undoRequesterSide;
     Side surrenderRequesterSide;
     Side drawRequesterSide;
+    std::wstring notificationText;
+    float notificationTimer;
 
     bool aiMode;
     Side aiSide;

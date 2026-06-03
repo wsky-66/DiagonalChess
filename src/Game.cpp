@@ -46,6 +46,7 @@ Game::Game()
     , undoRequesterSide(Side::RED)
     , surrenderRequesterSide(Side::RED)
     , drawRequesterSide(Side::RED)
+    , notificationTimer(0.f)
 {
     window.setFramerateLimit(60);
     view = window.getDefaultView();
@@ -210,6 +211,14 @@ void Game::processEvents() {
 void Game::update(float dt) {
     updateParticles(dt);
 
+    if (notificationTimer > 0.f) {
+        notificationTimer -= dt;
+        if (notificationTimer <= 0.f) {
+            notificationTimer = 0.f;
+            notificationText.clear();
+        }
+    }
+
     if (gameOver) {
         gameOverTimer += dt;
     }
@@ -331,6 +340,13 @@ void Game::render() {
     window.draw(logDivider);
     if (showTutorial) drawTutorialPanel();
     drawNetUI();
+
+    if (!notificationText.empty() && notificationTimer > 0.f) {
+        float alpha = std::min(notificationTimer / 3.f, 1.f) * 255.f;
+        sf::Color notifColor(255, 180, 100, static_cast<sf::Uint8>(alpha));
+        drawTextWithShadow(notificationText, 940, logDividerY - 15, 15, notifColor, true);
+    }
+
     drawMoveLog();
 
     if (showSurrenderPopup) drawSurrenderPopup();
@@ -400,6 +416,8 @@ void Game::placePieces() {
     agreedDraw = false;
     gameOverTimer = 0.f;
     movesWithoutCapture = 0;
+    notificationTimer = 0.f;
+    notificationText.clear();
     while (!moveHistory.empty()) moveHistory.pop();
     moveLogStrings.clear();
     particles.clear();
@@ -1404,56 +1422,56 @@ void Game::drawButtons() {
 
     if (undoRequestReceived) {
         sf::RectangleShape bg(sf::Vector2f(200, 70));
-        bg.setPosition(730, 225);
+        bg.setPosition(940, 240);
         bg.setFillColor(sf::Color(180, 130, 30, 220));
         bg.setOutlineColor(sf::Color(255, 180, 50));
         bg.setOutlineThickness(2);
         window.draw(bg);
-        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u6094\u68cb", 830, 245, 16, sf::Color(255, 255, 200), true);
-        undoAcceptBtn.bounds.top = 260;
-        undoRejectBtn.bounds.top = 260;
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u6094\u68cb", 1040, 260, 16, sf::Color(255, 255, 200), true);
+        undoAcceptBtn.bounds = sf::FloatRect(940, 275, 95, 44);
+        undoRejectBtn.bounds = sf::FloatRect(1045, 275, 95, 44);
         drawSmallBtn(undoAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(undoRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 
     if (restartRequestReceived) {
-        sf::RectangleShape bg(sf::Vector2f(190, 70));
-        bg.setPosition(735, 270);
+        sf::RectangleShape bg(sf::Vector2f(200, 70));
+        bg.setPosition(940, 290);
         bg.setFillColor(sf::Color(180, 130, 30, 220));
         bg.setOutlineColor(sf::Color(255, 180, 50));
         bg.setOutlineThickness(2);
         window.draw(bg);
-        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u91cd\u5f00", 830, 290, 16, sf::Color(255, 255, 200), true);
-        restartAcceptBtn.bounds.top = 305;
-        restartRejectBtn.bounds.top = 305;
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u91cd\u5f00", 1040, 310, 16, sf::Color(255, 255, 200), true);
+        restartAcceptBtn.bounds = sf::FloatRect(940, 325, 95, 44);
+        restartRejectBtn.bounds = sf::FloatRect(1045, 325, 95, 44);
         drawSmallBtn(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 
     if (surrenderRequestReceived) {
-        sf::RectangleShape bg(sf::Vector2f(190, 70));
-        bg.setPosition(735, 270);
+        sf::RectangleShape bg(sf::Vector2f(200, 70));
+        bg.setPosition(940, 340);
         bg.setFillColor(sf::Color(180, 40, 40, 220));
         bg.setOutlineColor(sf::Color(255, 80, 80));
         bg.setOutlineThickness(2);
         window.draw(bg);
-        drawText(L"\u5bf9\u65b9\u8ba4\u8f93\u4e86", 830, 290, 16, sf::Color(255, 220, 200), true);
-        surrenderAcceptBtn.bounds.top = 305;
-        surrenderRejectBtn.bounds.top = 305;
+        drawText(L"\u5bf9\u65b9\u8ba4\u8f93\u4e86", 1040, 360, 16, sf::Color(255, 220, 200), true);
+        surrenderAcceptBtn.bounds = sf::FloatRect(940, 375, 95, 44);
+        surrenderRejectBtn.bounds = sf::FloatRect(1045, 375, 95, 44);
         drawSmallBtn(surrenderAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(surrenderRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 
     if (drawRequestReceived) {
-        sf::RectangleShape bg(sf::Vector2f(190, 70));
-        bg.setPosition(735, 270);
+        sf::RectangleShape bg(sf::Vector2f(200, 70));
+        bg.setPosition(940, 390);
         bg.setFillColor(sf::Color(180, 180, 40, 220));
         bg.setOutlineColor(sf::Color(255, 255, 80));
         bg.setOutlineThickness(2);
         window.draw(bg);
-        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u548c\u68cb", 830, 290, 16, sf::Color(255, 255, 200), true);
-        drawAcceptBtn.bounds.top = 305;
-        drawRejectBtn.bounds.top = 305;
+        drawText(L"\u5bf9\u65b9\u8bf7\u6c42\u548c\u68cb", 1040, 410, 16, sf::Color(255, 255, 200), true);
+        drawAcceptBtn.bounds = sf::FloatRect(940, 425, 95, 44);
+        drawRejectBtn.bounds = sf::FloatRect(1045, 425, 95, 44);
         drawSmallBtn(drawAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(drawRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
@@ -2080,6 +2098,8 @@ void Game::pollNetwork() {
             }
         } else if (msgType == 3) {
             undoRequestSent = false;
+            notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u6094\u68cb\u8bf7\u6c42";
+            notificationTimer = 3.f;
         } else if (msgType == 4) {
             restartRequestReceived = true;
         } else if (msgType == 5) {
@@ -2090,6 +2110,8 @@ void Game::pollNetwork() {
             socket.send(rstPkt);
         } else if (msgType == 6) {
             restartRequestSent = false;
+            notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u91cd\u5f00\u8bf7\u6c42";
+            notificationTimer = 3.f;
         } else if (msgType == 7) {
             int steps;
             packet >> steps;
@@ -2104,6 +2126,8 @@ void Game::pollNetwork() {
             doSurrender(netSide);
         } else if (msgType == 11) {
             surrenderRequestSent = false;
+            notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u8ba4\u8f93\u8bf7\u6c42";
+            notificationTimer = 3.f;
         } else if (msgType == 12) {
             drawRequestReceived = true;
             drawRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
@@ -2112,6 +2136,8 @@ void Game::pollNetwork() {
             doDraw();
         } else if (msgType == 14) {
             drawRequestSent = false;
+            notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u548c\u68cb\u8bf7\u6c42";
+            notificationTimer = 3.f;
         }
     } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
         disconnectNetwork();
@@ -2194,15 +2220,15 @@ void Game::drawNetUI() {
         }
     } else if (netState == NetState::HOST_WAITING) {
         sf::RectangleShape statusBg(sf::Vector2f(200, 90));
-        statusBg.setPosition(730, 390);
+        statusBg.setPosition(730, 500);
         statusBg.setFillColor(sf::Color(50, 45, 35));
         statusBg.setOutlineColor(sf::Color(80, 70, 55));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 410, 16, sf::Color(200, 200, 150), true);
-        drawText(L"\u672c\u673aIP:", 830, 436, 14, sf::Color(180, 180, 180), true);
-        drawText(localIP, 830, 458, 16, sf::Color(100, 255, 100), true);
+        drawText(L"\u7b49\u5f85\u8fde\u63a5...", 830, 520, 16, sf::Color(200, 200, 150), true);
+        drawText(L"\u672c\u673aIP:", 830, 546, 14, sf::Color(180, 180, 180), true);
+        drawText(localIP, 830, 568, 16, sf::Color(100, 255, 100), true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -2224,21 +2250,21 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 490;
+        disconnectBtn.bounds.top = 600;
         drawNetBtn(disconnectBtn);
     } else if (netState == NetState::CONNECTED) {
         sf::RectangleShape statusBg(sf::Vector2f(200, 80));
-        statusBg.setPosition(730, 390);
+        statusBg.setPosition(730, 500);
         statusBg.setFillColor(sf::Color(40, 60, 40));
         statusBg.setOutlineColor(sf::Color(80, 120, 80));
         statusBg.setOutlineThickness(1);
         window.draw(statusBg);
 
-        drawText(L"\u5df2\u8fde\u63a5", 830, 410, 18, sf::Color(100, 255, 100), true);
+        drawText(L"\u5df2\u8fde\u63a5", 830, 520, 18, sf::Color(100, 255, 100), true);
 
         std::wstring sideText = (netSide == Side::RED) ? L"\u4f60\u662f\u7ea2\u65b9" : L"\u4f60\u662f\u9ed1\u65b9";
         sf::Color sideColor = (netSide == Side::RED) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200);
-        drawText(sideText, 830, 445, 16, sideColor, true);
+        drawText(sideText, 830, 555, 16, sideColor, true);
 
         auto drawNetBtn = [this](const UIButton& btn) {
             sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -2260,7 +2286,7 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        disconnectBtn.bounds.top = 480;
+        disconnectBtn.bounds.top = 590;
         drawNetBtn(disconnectBtn);
     }
 }
