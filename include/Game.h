@@ -131,12 +131,15 @@ private:
     void startClient();
     void sendMove(int fromR, int fromC, int toR, int toC);
     void doSurrender(Side side);
+    void doDraw();
     void showSurrenderPanel();
     void drawSurrenderPopup();
     void sendUndoRequest();
     void sendRestartRequest();
     void sendSurrenderRequest();
     void sendSurrenderResponse(bool accept);
+    void sendDrawRequest();
+    void sendDrawResponse(bool accept);
     void applyUndoSteps(int steps);
     void pollNetwork();
     void disconnectNetwork();
@@ -162,6 +165,7 @@ private:
     Side winner;
     bool isDrawGame;
     bool surrendered;
+    bool agreedDraw;
     float gameOverTimer;
 
     std::stack<MoveRecord> moveHistory;
@@ -188,6 +192,7 @@ private:
     UIButton connectBtn;
     UIButton disconnectBtn;
     UIButton surrenderBtn;
+    UIButton drawOfferBtn;
     UIButton undoAcceptBtn;
     UIButton undoRejectBtn;
     UIButton restartAcceptBtn;
@@ -197,6 +202,8 @@ private:
     UIButton surrenderBlackBtn;
     UIButton surrenderAcceptBtn;
     UIButton surrenderRejectBtn;
+    UIButton drawAcceptBtn;
+    UIButton drawRejectBtn;
 
     NetState netState;
     sf::TcpListener listener;
@@ -214,8 +221,11 @@ private:
     bool restartRequestReceived;
     bool surrenderRequestSent;
     bool surrenderRequestReceived;
+    bool drawRequestSent;
+    bool drawRequestReceived;
     Side undoRequesterSide;
     Side surrenderRequesterSide;
+    Side drawRequesterSide;
 
     bool aiMode;
     Side aiSide;
