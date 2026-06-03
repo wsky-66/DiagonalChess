@@ -740,6 +740,9 @@ void Game::handleButtonClick(float mx, float my) {
     } else if (connectBtn.bounds.contains(mx, my) && showIPInput && !inputIP.empty()) {
         startClient();
         playClickSound();
+    } else if (disconnectBtn.bounds.contains(mx, my) && netState != NetState::OFFLINE) {
+        disconnectNetwork();
+        playClickSound();
     } else if (tutorialBtn.bounds.contains(mx, my) && !tutorialBtn.disabled) {
         showTutorial = !showTutorial;
         playClickSound();
@@ -2123,12 +2126,15 @@ void Game::disconnectNetwork() {
         netMode = false;
         onlineBtn.label = L"\u8054\u673a: \u5173\u95ed";
         showIPInput = false;
+        logDividerY = 440.f;
         undoRequestSent = false;
         undoRequestReceived = false;
         restartRequestSent = false;
         restartRequestReceived = false;
         surrenderRequestSent = false;
         surrenderRequestReceived = false;
+        drawRequestSent = false;
+        drawRequestReceived = false;
     }
 }
 
