@@ -120,7 +120,7 @@ void Game::processEvents() {
             float mx = static_cast<float>(event.mouseButton.x);
             float my = static_cast<float>(event.mouseButton.y);
 
-            float ly = netMode ? 520.f : logDividerY;
+            float ly = logDividerY;
             if (mx >= 715 && mx <= 1135 && my >= ly - 8 && my <= ly + 8) {
                 draggingLogDivider = true;
             } else if (gameOver && gameOverTimer > 0.5f && gameOverRestartBtn.bounds.contains(mx, my)) {
@@ -163,7 +163,7 @@ void Game::processEvents() {
             float mx = static_cast<float>(event.mouseMove.x);
             float my = static_cast<float>(event.mouseMove.y);
 
-            if (draggingLogDivider && !netMode) {
+            if (draggingLogDivider) {
                 logDividerY = std::max(395.f, std::min(my, 740.f));
             }
             undoBtn.hovered = undoBtn.bounds.contains(mx, my);
@@ -324,13 +324,11 @@ void Game::render() {
     drawPieces();
     drawUI();
     drawButtons();
-    if (!netMode) {
-        float dy = logDividerY;
-        sf::RectangleShape divider(sf::Vector2f(420, 6));
-        divider.setPosition(715, dy - 3);
-        divider.setFillColor(draggingLogDivider ? sf::Color(150, 120, 80) : sf::Color(90, 70, 45));
-        window.draw(divider);
-    }
+    float dy = logDividerY;
+    sf::RectangleShape logDivider(sf::Vector2f(420, 6));
+    logDivider.setPosition(715, dy - 3);
+    logDivider.setFillColor(draggingLogDivider ? sf::Color(150, 120, 80) : sf::Color(90, 70, 45));
+    window.draw(logDivider);
     if (showTutorial) drawTutorialPanel();
     drawNetUI();
     drawMoveLog();
@@ -728,7 +726,19 @@ void Game::handleButtonClick(float mx, float my) {
         if (!netMode) {
             disconnectNetwork();
             showIPInput = false;
+            logDividerY = 440.f;
+        } else {
+            logDividerY = 550.f;
         }
+        playClickSound();
+    } else if (hostBtn.bounds.contains(mx, my) && netMode && netState == NetState::OFFLINE) {
+        startHost();
+        playClickSound();
+    } else if (joinBtn.bounds.contains(mx, my) && netMode && netState == NetState::OFFLINE) {
+        showIPInput = !showIPInput;
+        playClickSound();
+    } else if (connectBtn.bounds.contains(mx, my) && showIPInput && !inputIP.empty()) {
+        startClient();
         playClickSound();
     } else if (tutorialBtn.bounds.contains(mx, my) && !tutorialBtn.disabled) {
         showTutorial = !showTutorial;
@@ -1449,8 +1459,8 @@ void Game::drawButtons() {
 void Game::drawMoveLog() {
     if (!fontLoaded) return;
 
-    float logY = netMode ? 520.f : logDividerY;
-    float logH = netMode ? 290.f : (810.f - logDividerY);
+    float logY = logDividerY;
+    float logH = 810.f - logDividerY;
 
     sf::RectangleShape logBg(sf::Vector2f(420, logH));
     logBg.setPosition(715, logY);
@@ -2159,9 +2169,6 @@ void Game::drawNetUI() {
             window.draw(t);
         };
 
-        drawNetBtn(hostBtn);
-        drawNetBtn(joinBtn);
-
         if (showIPInput) {
             sf::RectangleShape inputBg(sf::Vector2f(200, 35));
             inputBg.setPosition(730, 440);
@@ -2175,6 +2182,9 @@ void Game::drawNetUI() {
             drawText(displayIP, 740, 447, 15, ipColor);
 
             drawNetBtn(connectBtn);
+        } else {
+            drawNetBtn(hostBtn);
+            drawNetBtn(joinBtn);
         }
     } else if (netState == NetState::HOST_WAITING) {
         sf::RectangleShape statusBg(sf::Vector2f(200, 90));
