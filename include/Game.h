@@ -129,8 +129,13 @@ private:
     void startHost();
     void startClient();
     void sendMove(int fromR, int fromC, int toR, int toC);
+    void doSurrender(Side side);
+    void showSurrenderPanel();
+    void drawSurrenderPopup();
     void sendUndoRequest();
     void sendRestartRequest();
+    void sendSurrenderRequest();
+    void sendSurrenderResponse(bool accept);
     void applyUndoSteps(int steps);
     void pollNetwork();
     void disconnectNetwork();
@@ -180,11 +185,16 @@ private:
     UIButton joinBtn;
     UIButton connectBtn;
     UIButton disconnectBtn;
+    UIButton surrenderBtn;
     UIButton undoAcceptBtn;
     UIButton undoRejectBtn;
     UIButton restartAcceptBtn;
     UIButton restartRejectBtn;
     UIButton tutorialBtn;
+    UIButton surrenderRedBtn;
+    UIButton surrenderBlackBtn;
+    UIButton surrenderAcceptBtn;
+    UIButton surrenderRejectBtn;
 
     NetState netState;
     sf::TcpListener listener;
@@ -195,11 +205,15 @@ private:
     Side netSide;
     bool netMode;
     bool receivingMove;
+    bool showSurrenderPopup;
     bool undoRequestSent;
     bool undoRequestReceived;
     bool restartRequestSent;
     bool restartRequestReceived;
+    bool surrenderRequestSent;
+    bool surrenderRequestReceived;
     Side undoRequesterSide;
+    Side surrenderRequesterSide;
 
     bool aiMode;
     Side aiSide;

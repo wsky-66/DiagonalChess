@@ -32,10 +32,13 @@ Game::Game()
     , netMode(false)
     , netSide(Side::RED)
     , receivingMove(false)
+    , showSurrenderPopup(false)
     , undoRequestSent(false)
     , undoRequestReceived(false)
     , restartRequestSent(false)
     , restartRequestReceived(false)
+    , surrenderRequestSent(false)
+    , surrenderRequestReceived(false)
 {
     window.setFramerateLimit(60);
     view = window.getDefaultView();
@@ -52,15 +55,20 @@ Game::Game()
     difficultyBtn = {sf::FloatRect(835, 290, 95, 44), L"\u4e2d\u7b49", false, false};
     onlineBtn = {sf::FloatRect(730, 340, 95, 44), L"\u8054\u673a: \u5173", false, false};
     tutorialBtn = {sf::FloatRect(835, 340, 95, 44), L"\u6559\u7a0b", false, false};
-    hostBtn = {sf::FloatRect(730, 390, 95, 44), L"\u521b\u5efa\u623f\u95f4", false, false};
-    joinBtn = {sf::FloatRect(835, 390, 95, 44), L"\u52a0\u5165\u623f\u95f4", false, false};
-    connectBtn = {sf::FloatRect(730, 480, 200, 44), L"\u8fde\u63a5", false, false};
-    disconnectBtn = {sf::FloatRect(730, 390, 200, 44), L"\u65ad\u5f00\u8fde\u63a5", false, false};
+    surrenderBtn = {sf::FloatRect(730, 390, 200, 44), L"\u8ba4\u8f93", false, false};
+    hostBtn = {sf::FloatRect(730, 440, 95, 44), L"\u521b\u5efa\u623f\u95f4", false, false};
+    joinBtn = {sf::FloatRect(835, 440, 95, 44), L"\u52a0\u5165\u623f\u95f4", false, false};
+    connectBtn = {sf::FloatRect(730, 530, 200, 44), L"\u8fde\u63a5", false, false};
+    disconnectBtn = {sf::FloatRect(730, 440, 200, 44), L"\u65ad\u5f00\u8fde\u63a5", false, false};
     gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91cd\u65b0\u5f00\u59cb", false, false};
     undoAcceptBtn = {sf::FloatRect(730, 240, 95, 44), L"\u540c\u610f", false, false};
     undoRejectBtn = {sf::FloatRect(835, 240, 95, 44), L"\u62d2\u7edd", false, false};
     restartAcceptBtn = {sf::FloatRect(730, 290, 95, 44), L"\u540c\u610f", false, false};
     restartRejectBtn = {sf::FloatRect(835, 290, 95, 44), L"\u62d2\u7edd", false, false};
+    surrenderRedBtn = {sf::FloatRect(0, 0, 180, 50), L"\u7ea2\u65b9\u8ba4\u8f93", false, false};
+    surrenderBlackBtn = {sf::FloatRect(0, 0, 180, 50), L"\u9ed1\u65b9\u8ba4\u8f93", false, false};
+    surrenderAcceptBtn = {sf::FloatRect(730, 240, 95, 44), L"\u540c\u610f", false, false};
+    surrenderRejectBtn = {sf::FloatRect(835, 240, 95, 44), L"\u62d2\u7edd", false, false};
 
     placePieces();
     initSounds();
@@ -108,6 +116,18 @@ void Game::processEvents() {
             } else if (gameOver && gameOverTimer > 0.5f && gameOverRestartBtn.bounds.contains(mx, my)) {
                 restartGame();
                 playClickSound();
+            } else if (showSurrenderPopup && !aiMode && netState != NetState::CONNECTED) {
+                if (surrenderRedBtn.bounds.contains(mx, my)) {
+                    doSurrender(Side::RED);
+                    showSurrenderPopup = false;
+                    playClickSound();
+                } else if (surrenderBlackBtn.bounds.contains(mx, my)) {
+                    doSurrender(Side::BLACK);
+                    showSurrenderPopup = false;
+                    playClickSound();
+                } else if (mx < 700 || mx > 1100 || my < 250 || my > 540) {
+                    showSurrenderPopup = false;
+                }
             } else if (mx >= 700) {
                 handleButtonClick(mx, my);
             } else {
@@ -151,6 +171,11 @@ void Game::processEvents() {
             restartAcceptBtn.hovered = restartAcceptBtn.bounds.contains(mx, my);
             restartRejectBtn.hovered = restartRejectBtn.bounds.contains(mx, my);
             tutorialBtn.hovered = tutorialBtn.bounds.contains(mx, my);
+            surrenderBtn.hovered = surrenderBtn.bounds.contains(mx, my);
+            surrenderRedBtn.hovered = surrenderRedBtn.bounds.contains(mx, my);
+            surrenderBlackBtn.hovered = surrenderBlackBtn.bounds.contains(mx, my);
+            surrenderAcceptBtn.hovered = surrenderAcceptBtn.bounds.contains(mx, my);
+            surrenderRejectBtn.hovered = surrenderRejectBtn.bounds.contains(mx, my);
         }
 
         if (event.type == sf::Event::TextEntered && showIPInput) {
@@ -189,6 +214,8 @@ void Game::update(float dt) {
             undoRequestReceived = false;
             restartRequestSent = false;
             restartRequestReceived = false;
+            surrenderRequestSent = false;
+            surrenderRequestReceived = false;
             restartGame();
         }
     }
@@ -215,6 +242,19 @@ void Game::update(float dt) {
     } else {
         restartBtn.label = L"\u91cd\u65b0\u5f00\u59cb";
         restartBtn.disabled = false;
+    }
+
+    if (surrenderRequestSent) {
+        surrenderBtn.label = L"\u7b49\u5f85\u540c\u610f...";
+        surrenderBtn.disabled = true;
+    } else if (surrenderRequestReceived) {
+        surrenderBtn.disabled = true;
+    } else if (gameOver) {
+        surrenderBtn.label = L"\u8ba4\u8f93";
+        surrenderBtn.disabled = true;
+    } else {
+        surrenderBtn.label = L"\u8ba4\u8f93";
+        surrenderBtn.disabled = false;
     }
 
     if (aiMode && !netMode && currentTurn == aiSide && !gameOver) {
@@ -266,6 +306,8 @@ void Game::render() {
     if (showTutorial) drawTutorialPanel();
     drawNetUI();
     drawMoveLog();
+
+    if (showSurrenderPopup) drawSurrenderPopup();
 
     if (gameOver) {
         drawGameOverEffect();
@@ -560,6 +602,23 @@ void Game::handleButtonClick(float mx, float my) {
         playClickSound();
         return;
     }
+    if (surrenderAcceptBtn.bounds.contains(mx, my) && surrenderRequestReceived) {
+        sf::Packet pkt;
+        pkt << 10;
+        socket.send(pkt);
+        surrenderRequestReceived = false;
+        doSurrender(surrenderRequesterSide);
+        playClickSound();
+        return;
+    }
+    if (surrenderRejectBtn.bounds.contains(mx, my) && surrenderRequestReceived) {
+        sf::Packet pkt;
+        pkt << 11;
+        socket.send(pkt);
+        surrenderRequestReceived = false;
+        playClickSound();
+        return;
+    }
     if (restartAcceptBtn.bounds.contains(mx, my) && restartRequestReceived) {
         sf::Packet pkt;
         pkt << 5;
@@ -626,6 +685,19 @@ void Game::handleButtonClick(float mx, float my) {
         playClickSound();
     } else if (tutorialBtn.bounds.contains(mx, my) && !tutorialBtn.disabled) {
         showTutorial = !showTutorial;
+        playClickSound();
+    } else if (surrenderBtn.bounds.contains(mx, my) && !surrenderBtn.disabled) {
+        if (aiMode) {
+            doSurrender(Side::RED);
+        } else if (netState == NetState::CONNECTED) {
+            if (!surrenderRequestSent) {
+                sendSurrenderRequest();
+                surrenderRequestSent = true;
+                surrenderRequesterSide = netSide;
+            }
+        } else {
+            showSurrenderPopup = true;
+        }
         playClickSound();
     }
 }
@@ -728,6 +800,7 @@ void Game::undoMove() {
 
     pieceSelected = false;
     validMoves.clear();
+    showSurrenderPopup = false;
 }
 
 void Game::restartGame() {
@@ -738,6 +811,23 @@ void Game::restartGame() {
     undoRequestReceived = false;
     restartRequestSent = false;
     restartRequestReceived = false;
+    surrenderRequestSent = false;
+    surrenderRequestReceived = false;
+    showSurrenderPopup = false;
+}
+
+void Game::doSurrender(Side side) {
+    showSurrenderPopup = false;
+    gameOver = true;
+    winner = (side == Side::RED) ? Side::BLACK : Side::RED;
+    isDrawGame = false;
+    gameOverTimer = 0.f;
+    createWinParticles(winner);
+    if (winner == Side::RED) {
+        playWinSound();
+    } else {
+        playLoseSound();
+    }
 }
 
 void Game::checkGameEnd() {
@@ -1190,6 +1280,7 @@ void Game::drawButtons() {
     drawBtn(difficultyBtn);
     drawBtn(onlineBtn);
     drawBtn(tutorialBtn);
+    drawBtn(surrenderBtn);
 
     auto drawSmallBtn = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
         sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -1236,6 +1327,20 @@ void Game::drawButtons() {
         restartRejectBtn.bounds.top = 305;
         drawSmallBtn(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         drawSmallBtn(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
+    }
+
+    if (surrenderRequestReceived) {
+        sf::RectangleShape bg(sf::Vector2f(190, 70));
+        bg.setPosition(735, 270);
+        bg.setFillColor(sf::Color(180, 40, 40, 220));
+        bg.setOutlineColor(sf::Color(255, 80, 80));
+        bg.setOutlineThickness(2);
+        window.draw(bg);
+        drawText(L"\u5bf9\u65b9\u8ba4\u8f93\u4e86", 830, 290, 16, sf::Color(255, 220, 200), true);
+        surrenderAcceptBtn.bounds.top = 305;
+        surrenderRejectBtn.bounds.top = 305;
+        drawSmallBtn(surrenderAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
+        drawSmallBtn(surrenderRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
 }
 
@@ -1733,6 +1838,8 @@ void Game::startHost() {
         undoRequestReceived = false;
         restartRequestSent = false;
         restartRequestReceived = false;
+        surrenderRequestSent = false;
+        surrenderRequestReceived = false;
     }
 }
 
@@ -1751,6 +1858,8 @@ void Game::startClient() {
         undoRequestReceived = false;
         restartRequestSent = false;
         restartRequestReceived = false;
+        surrenderRequestSent = false;
+        surrenderRequestReceived = false;
         restartGame();
     } else {
         showIPInput = true;
@@ -1772,6 +1881,18 @@ void Game::sendUndoRequest() {
 void Game::sendRestartRequest() {
     sf::Packet packet;
     packet << 4;
+    socket.send(packet);
+}
+
+void Game::sendSurrenderRequest() {
+    sf::Packet packet;
+    packet << 9;
+    socket.send(packet);
+}
+
+void Game::sendSurrenderResponse(bool accept) {
+    sf::Packet packet;
+    packet << (accept ? 10 : 11);
     socket.send(packet);
 }
 
@@ -1835,6 +1956,14 @@ void Game::pollNetwork() {
             applyUndoSteps(steps);
         } else if (msgType == 8) {
             restartGame();
+        } else if (msgType == 9) {
+            surrenderRequestReceived = true;
+            surrenderRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+        } else if (msgType == 10) {
+            surrenderRequestSent = false;
+            doSurrender(netSide);
+        } else if (msgType == 11) {
+            surrenderRequestSent = false;
         }
     } else if (status == sf::Socket::Disconnected || status == sf::Socket::Error) {
         disconnectNetwork();
@@ -1851,6 +1980,10 @@ void Game::disconnectNetwork() {
         showIPInput = false;
         undoRequestSent = false;
         undoRequestReceived = false;
+        restartRequestSent = false;
+        restartRequestReceived = false;
+        surrenderRequestSent = false;
+        surrenderRequestReceived = false;
     }
 }
 
@@ -2034,4 +2167,53 @@ void Game::drawTutorialPanel() {
                  isHeader ? sf::Color(255, 200, 100) : sf::Color(210, 200, 180));
         y += isHeader ? 26 : 21;
     }
+}
+
+void Game::drawSurrenderPopup() {
+    sf::RectangleShape overlay(sf::Vector2f(1150, 820));
+    overlay.setPosition(0, 0);
+    overlay.setFillColor(sf::Color(0, 0, 0, 160));
+    window.draw(overlay);
+
+    sf::RectangleShape panel(sf::Vector2f(400, 300));
+    panel.setPosition(375, 260);
+    panel.setFillColor(sf::Color(50, 40, 30));
+    panel.setOutlineColor(sf::Color(120, 100, 70));
+    panel.setOutlineThickness(3);
+    window.draw(panel);
+
+    drawTextWithShadow(L"\u8ba4\u8f93", 575, 295, 28, sf::Color(255, 220, 150), true);
+    drawText(L"\u8bf7\u9009\u62e9\u8ba4\u8f93\u65b9", 575, 340, 16, sf::Color(200, 190, 170), true);
+
+    float btnY = 380;
+    float btnW = 160;
+    float btnH = 55;
+
+    surrenderRedBtn.bounds = sf::FloatRect(440, btnY, btnW, btnH);
+    surrenderBlackBtn.bounds = sf::FloatRect(550, btnY, btnW, btnH);
+
+    auto drawSurrenderOption = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
+        sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
+        rect.setPosition(btn.bounds.left, btn.bounds.top);
+        rect.setFillColor(btn.hovered ? sf::Color(fill.r + 50, fill.g + 30, fill.b + 20) : fill);
+        rect.setOutlineColor(outline);
+        rect.setOutlineThickness(3);
+        window.draw(rect);
+
+        sf::Text t;
+        t.setFont(font);
+        t.setString(btn.label);
+        t.setCharacterSize(22);
+        t.setFillColor(sf::Color(255, 255, 255));
+        sf::FloatRect bounds = t.getLocalBounds();
+        t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+        t.setPosition(btn.bounds.left + btn.bounds.width / 2.f,
+                     btn.bounds.top + btn.bounds.height / 2.f);
+        window.draw(t);
+    };
+
+    drawSurrenderOption(surrenderRedBtn, sf::Color(180, 40, 40), sf::Color(240, 80, 80));
+    drawSurrenderOption(surrenderBlackBtn, sf::Color(40, 40, 40), sf::Color(100, 100, 100));
+
+    drawText(L"\u70b9\u51fb\u5916\u90e8\u53d6\u6d88", 575, 500, 14, sf::Color(150, 140, 130), true);
 }
