@@ -39,6 +39,8 @@ Game::Game()
     , restartRequestReceived(false)
     , surrenderRequestSent(false)
     , surrenderRequestReceived(false)
+    , undoRequesterSide(Side::RED)
+    , surrenderRequesterSide(Side::RED)
 {
     window.setFramerateLimit(60);
     view = window.getDefaultView();
@@ -125,7 +127,7 @@ void Game::processEvents() {
                     doSurrender(Side::BLACK);
                     showSurrenderPopup = false;
                     playClickSound();
-                } else if (mx < 700 || mx > 1100 || my < 250 || my > 540) {
+                } else if (mx < 405 || mx > 745 || my < 310 || my > 510) {
                     showSurrenderPopup = false;
                 }
             } else if (mx >= 700) {
@@ -965,6 +967,16 @@ bool Game::wouldBeInCheck(int fromR, int fromC, int toR, int toC, Side side) con
     return isInCheckB(tempBoard, side);
 }
 
+bool Game::wouldBeInCheckB(const Piece b[9][9], int fromR, int fromC, int toR, int toC, Side side) const {
+    Piece tempBoard[9][9];
+    for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+            tempBoard[r][c] = b[r][c];
+    tempBoard[toR][toC] = tempBoard[fromR][fromC];
+    tempBoard[fromR][fromC] = {PieceType::NONE, Side::RED, false};
+    return isInCheckB(tempBoard, side);
+}
+
 std::wstring Game::getPieceName(PieceType type, Side side) const {
     if (side == Side::RED) {
         switch (type) {
@@ -1710,6 +1722,7 @@ std::vector<AIMove> Game::generateAllMoves(const Piece b[9][9], Side side) const
                     if (tr == r && tc == c) continue;
                     if (b[tr][tc].alive && b[tr][tc].side == side) continue;
                     if (isValidMoveB(b, r, c, tr, tc)) {
+                        if (wouldBeInCheckB(b, r, c, tr, tc, b[r][c].side)) continue;
                         AIMove m;
                         m.fromR = r; m.fromC = c;
                         m.toR = tr; m.toC = tc;
@@ -1933,11 +1946,13 @@ void Game::pollNetwork() {
             undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
         } else if (msgType == 2) {
             undoRequestSent = false;
-            int steps = (moveHistory.top().side == undoRequesterSide) ? 1 : 2;
-            applyUndoSteps(steps);
-            sf::Packet undoPkt;
-            undoPkt << 7 << steps;
-            socket.send(undoPkt);
+            if (!moveHistory.empty()) {
+                int steps = (moveHistory.top().side == netSide) ? 1 : 2;
+                applyUndoSteps(steps);
+                sf::Packet undoPkt;
+                undoPkt << 7 << steps;
+                socket.send(undoPkt);
+            }
         } else if (msgType == 3) {
             undoRequestSent = false;
         } else if (msgType == 4) {
@@ -2175,22 +2190,31 @@ void Game::drawSurrenderPopup() {
     overlay.setFillColor(sf::Color(0, 0, 0, 160));
     window.draw(overlay);
 
-    sf::RectangleShape panel(sf::Vector2f(400, 300));
-    panel.setPosition(375, 260);
+    float panelW = 340;
+    float panelH = 200;
+    float panelX = (1150 - panelW) / 2;
+    float panelY = 310;
+
+    sf::RectangleShape panel(sf::Vector2f(panelW, panelH));
+    panel.setPosition(panelX, panelY);
     panel.setFillColor(sf::Color(50, 40, 30));
     panel.setOutlineColor(sf::Color(120, 100, 70));
     panel.setOutlineThickness(3);
     window.draw(panel);
 
-    drawTextWithShadow(L"\u8ba4\u8f93", 575, 295, 28, sf::Color(255, 220, 150), true);
-    drawText(L"\u8bf7\u9009\u62e9\u8ba4\u8f93\u65b9", 575, 340, 16, sf::Color(200, 190, 170), true);
+    float centerX = panelX + panelW / 2;
 
-    float btnY = 380;
-    float btnW = 160;
-    float btnH = 55;
+    drawTextWithShadow(L"\u8ba4\u8f93", centerX, panelY + 35, 26, sf::Color(255, 220, 150), true);
+    drawText(L"\u8bf7\u9009\u62e9\u8ba4\u8f93\u65b9", centerX, panelY + 70, 14, sf::Color(200, 190, 170), true);
 
-    surrenderRedBtn.bounds = sf::FloatRect(440, btnY, btnW, btnH);
-    surrenderBlackBtn.bounds = sf::FloatRect(550, btnY, btnW, btnH);
+    float btnW = 130;
+    float btnH = 44;
+    float btnY = panelY + 95;
+    float gap = 20;
+    float btnLeftX = centerX - btnW - gap / 2;
+
+    surrenderRedBtn.bounds = sf::FloatRect(btnLeftX, btnY, btnW, btnH);
+    surrenderBlackBtn.bounds = sf::FloatRect(centerX + gap / 2, btnY, btnW, btnH);
 
     auto drawSurrenderOption = [this](const UIButton& btn, sf::Color fill, sf::Color outline) {
         sf::RectangleShape rect(sf::Vector2f(btn.bounds.width, btn.bounds.height));
@@ -2203,7 +2227,7 @@ void Game::drawSurrenderPopup() {
         sf::Text t;
         t.setFont(font);
         t.setString(btn.label);
-        t.setCharacterSize(22);
+        t.setCharacterSize(18);
         t.setFillColor(sf::Color(255, 255, 255));
         sf::FloatRect bounds = t.getLocalBounds();
         t.setOrigin(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
@@ -2215,5 +2239,5 @@ void Game::drawSurrenderPopup() {
     drawSurrenderOption(surrenderRedBtn, sf::Color(180, 40, 40), sf::Color(240, 80, 80));
     drawSurrenderOption(surrenderBlackBtn, sf::Color(40, 40, 40), sf::Color(100, 100, 100));
 
-    drawText(L"\u70b9\u51fb\u5916\u90e8\u53d6\u6d88", 575, 500, 14, sf::Color(150, 140, 130), true);
+    drawText(L"\u70b9\u51fb\u5916\u90e8\u53d6\u6d88", centerX, panelY + panelH + 18, 13, sf::Color(150, 140, 130), true);
 }

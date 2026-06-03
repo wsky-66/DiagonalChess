@@ -98,6 +98,7 @@ private:
     bool isCheckmate(Side side) const;
     bool hasInsufficientMaterial() const;
     bool wouldBeInCheck(int fromR, int fromC, int toR, int toC, Side side) const;
+    bool wouldBeInCheckB(const Piece b[9][9], int fromR, int fromC, int toR, int toC, Side side) const;
 
     std::wstring getMoveString(const MoveRecord& move) const;
     std::wstring getPieceName(PieceType type, Side side) const;
