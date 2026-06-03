@@ -359,11 +359,6 @@ void DiagonalChessGame::HandleButtonClick(float mx, float my) {
         if (gameOver) { network.undoRequestReceived = false; return; }
         network.SendUndoAccept();
         network.undoRequestReceived = false;
-        if (!gameOver && !moveHistory.empty()) {
-            int steps = (moveHistory.top().side == network.GetNetSide()) ? 1 : 2;
-            ApplyUndoSteps(steps);
-            network.SendUndoAck(steps);
-        }
         audio.PlayClickSound();
         return;
     }
