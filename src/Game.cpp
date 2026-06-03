@@ -45,7 +45,6 @@ Game::Game()
     , drawRequestReceived(false)
     , undoRequesterSide(Side::RED)
     , surrenderRequesterSide(Side::RED)
-    , drawRequesterSide(Side::RED)
     , notificationTimer(0.f)
 {
     window.setFramerateLimit(60);
@@ -241,8 +240,9 @@ void Game::update(float dt) {
             restartRequestReceived = false;
             surrenderRequestSent = false;
             surrenderRequestReceived = false;
-            drawRequestSent = false;
-            drawRequestReceived = false;
+        drawRequestSent = false;
+        drawRequestReceived = false;
+        receivingMove = false;
             restartGame();
         }
     }
@@ -276,7 +276,7 @@ void Game::update(float dt) {
         surrenderBtn.disabled = true;
     } else if (surrenderRequestReceived) {
         surrenderBtn.disabled = true;
-    } else if (gameOver) {
+    } else if (gameOver || netState == NetState::HOST_WAITING) {
         surrenderBtn.label = L"\u8ba4\u8f93";
         surrenderBtn.disabled = true;
     } else {
@@ -289,7 +289,7 @@ void Game::update(float dt) {
         drawOfferBtn.disabled = true;
     } else if (drawRequestReceived) {
         drawOfferBtn.disabled = true;
-    } else if (gameOver) {
+    } else if (gameOver || netState == NetState::HOST_WAITING) {
         drawOfferBtn.label = L"\u548c\u68cb";
         drawOfferBtn.disabled = true;
     } else {
@@ -582,7 +582,8 @@ void Game::handleBoardClick(int r, int c) {
     if (gameOver) return;
     if (aiMode && !netMode && currentTurn == aiSide) return;
     if (netState == NetState::CONNECTED && currentTurn != netSide) return;
-    if (undoRequestSent || undoRequestReceived || restartRequestSent || restartRequestReceived) return;
+    if (undoRequestSent || undoRequestReceived || restartRequestSent || restartRequestReceived ||
+        surrenderRequestSent || surrenderRequestReceived || drawRequestSent || drawRequestReceived) return;
 
     if (!pieceSelected) {
         if (board[r][c].alive && board[r][c].side == currentTurn) {
@@ -629,6 +630,7 @@ void Game::handleButtonClick(float mx, float my) {
         return;
     }
     if (undoAcceptBtn.bounds.contains(mx, my) && undoRequestReceived) {
+        if (gameOver) return;
         sf::Packet pkt;
         pkt << 2;
         socket.send(pkt);
@@ -645,6 +647,7 @@ void Game::handleButtonClick(float mx, float my) {
         return;
     }
     if (surrenderAcceptBtn.bounds.contains(mx, my) && surrenderRequestReceived) {
+        if (gameOver) { surrenderRequestReceived = false; return; }
         sf::Packet pkt;
         pkt << 10;
         socket.send(pkt);
@@ -662,6 +665,7 @@ void Game::handleButtonClick(float mx, float my) {
         return;
     }
     if (drawAcceptBtn.bounds.contains(mx, my) && drawRequestReceived) {
+        if (gameOver) { drawRequestReceived = false; return; }
         sf::Packet pkt;
         pkt << 13;
         socket.send(pkt);
@@ -679,6 +683,7 @@ void Game::handleButtonClick(float mx, float my) {
         return;
     }
     if (restartAcceptBtn.bounds.contains(mx, my) && restartRequestReceived) {
+        if (gameOver) { restartRequestReceived = false; return; }
         sf::Packet pkt;
         pkt << 5;
         socket.send(pkt);
@@ -774,14 +779,19 @@ void Game::handleButtonClick(float mx, float my) {
         }
         playClickSound();
     } else if (drawOfferBtn.bounds.contains(mx, my) && !drawOfferBtn.disabled) {
-        if (aiMode) {
-            doDraw();
-        } else if (netState == NetState::CONNECTED) {
-            if (!drawRequestSent) {
+        if (netState == NetState::CONNECTED) {
+            if (drawRequestReceived) {
+                sf::Packet pkt;
+                pkt << 13;
+                socket.send(pkt);
+                drawRequestReceived = false;
+                doDraw();
+            } else if (!drawRequestSent) {
                 sendDrawRequest();
                 drawRequestSent = true;
-                drawRequesterSide = netSide;
             }
+        } else if (aiMode) {
+            doDraw();
         } else {
             doDraw();
         }
@@ -798,6 +808,7 @@ void Game::executeMove(int fromR, int fromC, int toR, int toC) {
     record.movedPiece = board[fromR][fromC];
     record.capturedPiece = board[toR][toC];
     record.side = currentTurn;
+    record.prevMovesWithoutCapture = movesWithoutCapture;
 
     bool captured = board[toR][toC].alive;
 
@@ -863,26 +874,18 @@ void Game::undoMove() {
             moveHistory.pop();
             board[record.fromR][record.fromC] = record.movedPiece;
             board[record.toR][record.toC] = record.capturedPiece;
-            if (record.capturedPiece.alive) {
-                movesWithoutCapture = 0;
-            } else {
-                movesWithoutCapture--;
-            }
             currentTurn = record.side;
             if (!moveLogStrings.empty()) moveLogStrings.pop_back();
         }
+        movesWithoutCapture = moveHistory.top().prevMovesWithoutCapture;
         moveLogStrings.push_back(L"\u6094\u68cb");
     } else {
         MoveRecord record = moveHistory.top();
         moveHistory.pop();
         board[record.fromR][record.fromC] = record.movedPiece;
         board[record.toR][record.toC] = record.capturedPiece;
-        if (record.capturedPiece.alive) {
-            movesWithoutCapture = 0;
-        } else {
-            movesWithoutCapture--;
-        }
         currentTurn = record.side;
+        movesWithoutCapture = record.prevMovesWithoutCapture;
         if (!moveLogStrings.empty()) moveLogStrings.pop_back();
         moveLogStrings.push_back(L"\u6094\u68cb");
     }
@@ -936,6 +939,7 @@ void Game::doDraw() {
 }
 
 void Game::checkGameEnd() {
+    showSurrenderPopup = false;
     if (movesWithoutCapture >= Game::DRAW_LIMIT) {
         gameOver = true;
         isDrawGame = true;
@@ -1036,15 +1040,13 @@ bool Game::hasInsufficientMaterial() const {
             if (board[r][c].side == Side::RED) {
                 redPieces++;
                 if (board[r][c].type != PieceType::GENERAL &&
-                    board[r][c].type != PieceType::ADVISOR &&
-                    board[r][c].type != PieceType::ELEPHANT) {
+                    board[r][c].type != PieceType::ADVISOR) {
                     redHasAttack = true;
                 }
             } else {
                 blackPieces++;
                 if (board[r][c].type != PieceType::GENERAL &&
-                    board[r][c].type != PieceType::ADVISOR &&
-                    board[r][c].type != PieceType::ELEPHANT) {
+                    board[r][c].type != PieceType::ADVISOR) {
                     blackHasAttack = true;
                 }
             }
@@ -1893,8 +1895,8 @@ int Game::evaluate(const Piece b[9][9]) const {
         }
     }
 
-    if (!redGeneral) return -99999;
-    if (!blackGeneral) return 99999;
+    if (!redGeneral) return -100000;
+    if (!blackGeneral) return 100000;
     return score;
 }
 
@@ -1905,7 +1907,7 @@ int Game::minimax(Piece b[9][9], int depth, int alpha, int beta, bool isMaximizi
     auto moves = generateAllMoves(b, currentSide);
 
     if (moves.empty()) {
-        return isMaximizing ? -90000 : 90000;
+        return isMaximizing ? -100000 : 100000;
     }
 
     if (isMaximizing) {
@@ -1965,8 +1967,8 @@ int Game::getPositionBonus(PieceType type, int r, int c, Side side) const {
     int dist = std::abs(r - 4) + std::abs(c - 4);
     switch (type) {
         case PieceType::SOLDIER:
-            if (side == Side::RED) return (8 - dist) * 5;
-            else return (8 - dist) * 5;
+            if (side == Side::RED) return r * 10;
+            else return (8 - r) * 10;
         case PieceType::HORSE:
             if (dist <= 3) return 30;
             return 0;
@@ -2075,6 +2077,11 @@ void Game::applyUndoSteps(int steps) {
         currentTurn = record.side;
         if (!moveLogStrings.empty()) moveLogStrings.pop_back();
     }
+    if (!moveHistory.empty()) {
+        movesWithoutCapture = moveHistory.top().prevMovesWithoutCapture;
+    } else {
+        movesWithoutCapture = 0;
+    }
     pieceSelected = false;
     validMoves.clear();
     if (gameOver) {
@@ -2094,15 +2101,28 @@ void Game::pollNetwork() {
         if (msgType == 0) {
             int fromR, fromC, toR, toC;
             packet >> fromR >> fromC >> toR >> toC;
+            if (gameOver) return;
+            if (undoRequestSent || restartRequestSent || surrenderRequestSent || drawRequestSent) return;
             receivingMove = true;
             executeMove(fromR, fromC, toR, toC);
             receivingMove = false;
         } else if (msgType == 1) {
-            undoRequestReceived = true;
-            undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+            if (undoRequestSent) {
+                undoRequestSent = false;
+                if (!gameOver && !moveHistory.empty()) {
+                    int steps = (moveHistory.top().side == netSide) ? 1 : 2;
+                    applyUndoSteps(steps);
+                    sf::Packet undoPkt;
+                    undoPkt << 7 << steps;
+                    socket.send(undoPkt);
+                }
+            } else {
+                undoRequestReceived = true;
+                undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+            }
         } else if (msgType == 2) {
             undoRequestSent = false;
-            if (!moveHistory.empty()) {
+            if (!gameOver && !moveHistory.empty()) {
                 int steps = (moveHistory.top().side == netSide) ? 1 : 2;
                 applyUndoSteps(steps);
                 sf::Packet undoPkt;
@@ -2114,13 +2134,25 @@ void Game::pollNetwork() {
             notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u6094\u68cb\u8bf7\u6c42";
             notificationTimer = 3.f;
         } else if (msgType == 4) {
-            restartRequestReceived = true;
+            if (restartRequestSent) {
+                restartRequestSent = false;
+                if (!gameOver) {
+                    restartGame();
+                    sf::Packet rstPkt;
+                    rstPkt << 8;
+                    socket.send(rstPkt);
+                }
+            } else {
+                restartRequestReceived = true;
+            }
         } else if (msgType == 5) {
             restartRequestSent = false;
-            restartGame();
-            sf::Packet rstPkt;
-            rstPkt << 8;
-            socket.send(rstPkt);
+            if (!gameOver) {
+                restartGame();
+                sf::Packet rstPkt;
+                rstPkt << 8;
+                socket.send(rstPkt);
+            }
         } else if (msgType == 6) {
             restartRequestSent = false;
             notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u91cd\u5f00\u8bf7\u6c42";
@@ -2132,21 +2164,30 @@ void Game::pollNetwork() {
         } else if (msgType == 8) {
             restartGame();
         } else if (msgType == 9) {
-            surrenderRequestReceived = true;
-            surrenderRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+            if (surrenderRequestSent) {
+                surrenderRequestSent = false;
+                if (!gameOver) doSurrender(netSide);
+            } else {
+                surrenderRequestReceived = true;
+                surrenderRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+            }
         } else if (msgType == 10) {
             surrenderRequestSent = false;
-            doSurrender(netSide);
+            if (!gameOver) doSurrender(netSide);
         } else if (msgType == 11) {
             surrenderRequestSent = false;
             notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u8ba4\u8f93\u8bf7\u6c42";
             notificationTimer = 3.f;
         } else if (msgType == 12) {
-            drawRequestReceived = true;
-            drawRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
+            if (drawRequestSent) {
+                drawRequestSent = false;
+                if (!gameOver) doDraw();
+            } else {
+                drawRequestReceived = true;
+            }
         } else if (msgType == 13) {
             drawRequestSent = false;
-            doDraw();
+            if (!gameOver) doDraw();
         } else if (msgType == 14) {
             drawRequestSent = false;
             notificationText = L"\u5bf9\u65b9\u62d2\u7edd\u4e86\u548c\u68cb\u8bf7\u6c42";

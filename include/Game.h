@@ -26,6 +26,7 @@ struct MoveRecord {
     Piece movedPiece;
     Piece capturedPiece;
     Side side;
+    int prevMovesWithoutCapture;
 };
 
 struct AIMove {
@@ -225,7 +226,6 @@ private:
     bool drawRequestReceived;
     Side undoRequesterSide;
     Side surrenderRequesterSide;
-    Side drawRequesterSide;
     std::wstring notificationText;
     float notificationTimer;
 
