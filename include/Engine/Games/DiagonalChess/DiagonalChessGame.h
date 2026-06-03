@@ -33,9 +33,7 @@ private:
     void CheckGameEnd();
     void DoAITurn();
     void ApplyUndoSteps(int steps);
-
     std::wstring GetMoveString(const MoveRecord& move) const;
-
     void SetupNetworkCallbacks();
 
     DiagonalChessBoard board;
@@ -49,10 +47,9 @@ private:
     sf::RenderWindow window;
     sf::Font font;
     sf::View view;
-    bool running;
     bool fontLoaded;
 
-    Side currentTurn;
+    int currentTurn; // 0=RED, 1=BLACK
     int selectedR, selectedC;
     bool pieceSelected;
     std::vector<sf::Vector2i> validMoves;
@@ -68,10 +65,9 @@ private:
     std::vector<std::wstring> moveLogStrings;
 
     bool aiMode;
-    Side aiSide;
+    int aiSide;
     bool aiThinking;
     float aiDelayTimer;
-
     bool receivingMove;
 
     static constexpr int WIN_W = 1150;

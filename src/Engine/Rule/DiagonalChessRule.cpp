@@ -2,137 +2,140 @@
 #include <cmath>
 #include <algorithm>
 
-bool DiagonalChessRule::IsInPalace(int r, int c, Side side) const {
-    if (side == Side::RED) {
-        return r >= 0 && r <= 2 && c >= 6 && c <= 8;
-    } else {
-        return r >= 6 && r <= 8 && c >= 0 && c <= 2;
-    }
+static const DiagonalChessBoard* CastBoard(const Board& b) {
+    return dynamic_cast<const DiagonalChessBoard*>(&b);
 }
 
-bool DiagonalChessRule::IsValidMove(const Piece b[9][9], int fromR, int fromC, int toR, int toC) const {
-    if (fromR < 0 || fromR >= 9 || fromC < 0 || fromC >= 9) return false;
-    if (toR < 0 || toR >= 9 || toC < 0 || toC >= 9) return false;
+bool DiagonalChessRule::IsValidMove(const Board& b, int fr, int fc, int tr, int tc) const {
+    auto* db = CastBoard(b);
+    return db ? IsValidMoveRaw(*db, fr, fc, tr, tc) : false;
+}
 
-    const Piece& piece = b[fromR][fromC];
-    if (!piece.alive) return false;
-    if (b[toR][toC].alive && b[toR][toC].side == piece.side) return false;
+bool DiagonalChessRule::IsGameOver(const Board& b, Side side, bool& isDraw, Side& winner) const {
+    auto* db = CastBoard(b);
+    return db ? IsGameOverRaw(*db, side, isDraw, winner) : false;
+}
 
-    switch (piece.type) {
-        case PieceType::CHARIOT: return CanChariotMove(b, fromR, fromC, toR, toC);
-        case PieceType::HORSE: return CanHorseMove(b, fromR, fromC, toR, toC);
-        case PieceType::ELEPHANT: return CanElephantMove(b, fromR, fromC, toR, toC);
-        case PieceType::ADVISOR: return CanAdvisorMove(b, fromR, fromC, toR, toC);
-        case PieceType::GENERAL: return CanGeneralMove(b, fromR, fromC, toR, toC);
-        case PieceType::CANNON: return CanCannonMove(b, fromR, fromC, toR, toC);
-        case PieceType::SOLDIER: return CanSoldierMove(b, fromR, fromC, toR, toC, piece.side);
+bool DiagonalChessRule::IsInCheck(const Board& b, Side side) const {
+    auto* db = CastBoard(b);
+    return db ? IsInCheckRaw(*db, static_cast<int>(side)) : false;
+}
+
+bool DiagonalChessRule::HasLegalMoves(const Board& b, Side side) const {
+    auto* db = CastBoard(b);
+    return db ? HasLegalMovesRaw(*db, static_cast<int>(side)) : false;
+}
+
+bool DiagonalChessRule::IsValidMoveRaw(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
+    if (!b.IsInside(fr, fc) || !b.IsInside(tr, tc)) return false;
+    if (!b.IsOccupied(fr, fc)) return false;
+
+    const auto& piece = b.At(fr, fc);
+    if (!piece.IsAlive()) return false;
+    if (b.IsOccupied(tr, tc) && b.At(tr, tc).GetSide() == piece.GetSide()) return false;
+
+    switch (piece.GetDType()) {
+        case DChessPieceType::CHARIOT:  return CanChariotMove(b, fr, fc, tr, tc);
+        case DChessPieceType::HORSE:    return CanHorseMove(b, fr, fc, tr, tc);
+        case DChessPieceType::ELEPHANT: return CanElephantMove(b, fr, fc, tr, tc);
+        case DChessPieceType::ADVISOR:  return CanAdvisorMove(b, fr, fc, tr, tc);
+        case DChessPieceType::GENERAL:  return CanGeneralMove(b, fr, fc, tr, tc);
+        case DChessPieceType::CANNON:   return CanCannonMove(b, fr, fc, tr, tc);
+        case DChessPieceType::SOLDIER:  return CanSoldierMove(b, fr, fc, tr, tc, piece.GetSide());
         default: return false;
     }
 }
 
-bool DiagonalChessRule::CanChariotMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::CanChariotMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     if (fr != tr && fc != tc) return false;
     return CountPiecesBetween(b, fr, fc, tr, tc) == 0;
 }
 
-bool DiagonalChessRule::CanHorseMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::CanHorseMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int dr = std::abs(tr - fr);
     int dc = std::abs(tc - fc);
     if (!((dr == 2 && dc == 1) || (dr == 1 && dc == 2))) return false;
     return !IsBlockedHorse(b, fr, fc, tr, tc);
 }
 
-bool DiagonalChessRule::IsBlockedHorse(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::IsBlockedHorse(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int dr = tr - fr;
     int dc = tc - fc;
     if (std::abs(dr) == 2) {
         int blockR = fr + (dr > 0 ? 1 : -1);
-        if (b[blockR][fc].alive) return true;
-    } else {
-        int blockC = fc + (dc > 0 ? 1 : -1);
-        if (b[fr][blockC].alive) return true;
+        return b.At(blockR, fc).IsAlive();
     }
-    return false;
+    int blockC = fc + (dc > 0 ? 1 : -1);
+    return b.At(fr, blockC).IsAlive();
 }
 
-bool DiagonalChessRule::CanElephantMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::CanElephantMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int dr = std::abs(tr - fr);
     int dc = std::abs(tc - fc);
     if (dr != 2 || dc != 2) return false;
     return !IsBlockedElephant(b, fr, fc, tr, tc);
 }
 
-bool DiagonalChessRule::IsBlockedElephant(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::IsBlockedElephant(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int midR = (fr + tr) / 2;
     int midC = (fc + tc) / 2;
-    return b[midR][midC].alive;
+    return b.At(midR, midC).IsAlive();
 }
 
-bool DiagonalChessRule::CanAdvisorMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
-    if (!IsInPalace(tr, tc, b[fr][fc].side)) return false;
+bool DiagonalChessRule::CanAdvisorMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
+    if (!IsInPalace(tr, tc, b.At(fr, fc).GetSide())) return false;
     int dr = std::abs(tr - fr);
     int dc = std::abs(tc - fc);
     return (dr <= 1 && dc <= 1 && (dr + dc > 0));
 }
 
-bool DiagonalChessRule::CanGeneralMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
-    if (!IsInPalace(tr, tc, b[fr][fc].side)) return false;
+bool DiagonalChessRule::CanGeneralMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
+    if (!IsInPalace(tr, tc, b.At(fr, fc).GetSide())) return false;
     int dr = std::abs(tr - fr);
     int dc = std::abs(tc - fc);
     return (dr + dc == 1);
 }
 
-bool DiagonalChessRule::CanCannonMove(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+bool DiagonalChessRule::CanCannonMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     if (fr != tr && fc != tc) return false;
     int count = CountPiecesBetween(b, fr, fc, tr, tc);
-    if (b[tr][tc].alive) {
-        return count == 1;
-    } else {
-        return count == 0;
-    }
+    if (b.IsOccupied(tr, tc)) return count == 1;
+    return count == 0;
 }
 
-int DiagonalChessRule::CountPiecesBetween(const Piece b[9][9], int fr, int fc, int tr, int tc) const {
+int DiagonalChessRule::CountPiecesBetween(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int count = 0;
     if (fr == tr) {
-        int minC = std::min(fc, tc);
-        int maxC = std::max(fc, tc);
-        for (int c = minC + 1; c < maxC; c++) {
-            if (b[fr][c].alive) count++;
-        }
+        int minC = std::min(fc, tc), maxC = std::max(fc, tc);
+        for (int c = minC + 1; c < maxC; c++)
+            if (b.IsOccupied(fr, c)) count++;
     } else if (fc == tc) {
-        int minR = std::min(fr, tr);
-        int maxR = std::max(fr, tr);
-        for (int r = minR + 1; r < maxR; r++) {
-            if (b[r][fc].alive) count++;
-        }
+        int minR = std::min(fr, tr), maxR = std::max(fr, tr);
+        for (int r = minR + 1; r < maxR; r++)
+            if (b.IsOccupied(r, fc)) count++;
     }
     return count;
 }
 
-bool DiagonalChessRule::CanSoldierMove(const Piece b[9][9], int fr, int fc, int tr, int tc, Side side) const {
+bool DiagonalChessRule::CanSoldierMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc, int side) const {
     int dr = tr - fr;
     int dc = tc - fc;
     if (std::abs(dr) + std::abs(dc) != 1) return false;
-    if (side == Side::RED) {
-        return (dr == 1 && dc == 0) || (dr == 0 && dc == -1);
-    } else {
-        return (dr == -1 && dc == 0) || (dr == 0 && dc == 1);
-    }
+    if (side == 0) return (dr == 1 && dc == 0) || (dr == 0 && dc == -1);
+    return (dr == -1 && dc == 0) || (dr == 0 && dc == 1);
 }
 
-std::vector<sf::Vector2i> DiagonalChessRule::GetValidMoves(const Piece b[9][9], int r, int c) const {
+std::vector<sf::Vector2i> DiagonalChessRule::GetValidMoves(const DiagonalChessBoard& b, int r, int c) const {
     std::vector<sf::Vector2i> moves;
-    if (r < 0 || r >= 9 || c < 0 || c >= 9) return moves;
-    if (!b[r][c].alive) return moves;
+    if (!b.IsInside(r, c) || !b.IsOccupied(r, c)) return moves;
 
-    const Piece& piece = b[r][c];
+    int side = b.At(r, c).GetSide();
     for (int tr = 0; tr < 9; tr++) {
         for (int tc = 0; tc < 9; tc++) {
             if (tr == r && tc == c) continue;
-            if (b[tr][tc].alive && b[tr][tc].side == piece.side) continue;
-            if (IsValidMove(b, r, c, tr, tc)) {
-                if (!WouldBeInCheck(b, r, c, tr, tc, piece.side)) {
+            if (b.IsOccupied(tr, tc) && b.At(tr, tc).GetSide() == side) continue;
+            if (IsValidMoveRaw(b, r, c, tr, tc)) {
+                if (!WouldBeInCheck(b, r, c, tr, tc, side)) {
                     moves.push_back(sf::Vector2i(tr, tc));
                 }
             }
@@ -141,116 +144,81 @@ std::vector<sf::Vector2i> DiagonalChessRule::GetValidMoves(const Piece b[9][9], 
     return moves;
 }
 
-bool DiagonalChessRule::IsInCheck(const Piece b[9][9], Side side) const {
-    return IsInCheckB(b, side);
-}
-
-bool DiagonalChessRule::IsInCheckB(const Piece b[9][9], Side side) const {
+bool DiagonalChessRule::IsInCheckRaw(const DiagonalChessBoard& b, int side) const {
     int gr = -1, gc = -1;
-    for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-            if (b[r][c].alive && b[r][c].type == PieceType::GENERAL && b[r][c].side == side) {
-                gr = r;
-                gc = c;
-                break;
-            }
-        }
-    }
-    if (gr < 0 || gc < 0) return false;
+    for (int r = 0; r < 9 && gr < 0; r++)
+        for (int c = 0; c < 9 && gr < 0; c++)
+            if (b.IsOccupied(r, c) && b.At(r, c).GetDType() == DChessPieceType::GENERAL && b.At(r, c).GetSide() == side)
+                { gr = r; gc = c; }
+    if (gr < 0) return false;
 
-    Side opp = (side == Side::RED) ? Side::BLACK : Side::RED;
-    for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-            if (b[r][c].alive && b[r][c].side == opp) {
-                if (IsValidMove(b, r, c, gr, gc)) return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool DiagonalChessRule::WouldBeInCheck(const Piece b[9][9], int fromR, int fromC, int toR, int toC, Side side) const {
-    Piece tempBoard[9][9];
-    for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-            tempBoard[r][c] = b[r][c];
-        }
-    }
-    tempBoard[toR][toC] = tempBoard[fromR][fromC];
-    tempBoard[fromR][fromC] = {PieceType::NONE, Side::RED, false};
-    return IsInCheckB(tempBoard, side);
-}
-
-bool DiagonalChessRule::WouldBeInCheckB(const Piece b[9][9], int fromR, int fromC, int toR, int toC, Side side) const {
-    Piece tempBoard[9][9];
+    int opp = 1 - side;
     for (int r = 0; r < 9; r++)
         for (int c = 0; c < 9; c++)
-            tempBoard[r][c] = b[r][c];
-    tempBoard[toR][toC] = tempBoard[fromR][fromC];
-    tempBoard[fromR][fromC] = {PieceType::NONE, Side::RED, false};
-    return IsInCheckB(tempBoard, side);
-}
-
-bool DiagonalChessRule::HasLegalMoves(const Piece b[9][9], Side side) const {
-    for (int r = 0; r < 9; r++) {
-        for (int c = 0; c < 9; c++) {
-            if (b[r][c].alive && b[r][c].side == side) {
-                auto moves = GetValidMoves(b, r, c);
-                if (!moves.empty()) return true;
-            }
-        }
-    }
+            if (b.IsOccupied(r, c) && b.At(r, c).GetSide() == opp)
+                if (IsValidMoveRaw(b, r, c, gr, gc)) return true;
     return false;
 }
 
-bool DiagonalChessRule::IsCheckmate(const Piece b[9][9], Side side) const {
-    if (!IsInCheck(b, side)) return false;
-    return !HasLegalMoves(b, side);
+bool DiagonalChessRule::IsInPalace(int r, int c, int side) const {
+    if (side == 0) return r >= 0 && r <= 2 && c >= 6 && c <= 8;
+    return r >= 6 && r <= 8 && c >= 0 && c <= 2;
 }
 
-bool DiagonalChessRule::HasInsufficientMaterial(const Piece b[9][9]) const {
+bool DiagonalChessRule::WouldBeInCheck(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc, int side) const {
+    DiagonalChessBoard temp;
+    b.CopyTo(temp);
+    temp.At(tr, tc) = temp.At(fr, fc);
+    temp.At(fr, fc) = DiagonalChessPiece(DChessPieceType::NONE, 0);
+    temp.At(fr, fc).SetAlive(false);
+    return IsInCheckRaw(temp, side);
+}
+
+bool DiagonalChessRule::HasLegalMovesRaw(const DiagonalChessBoard& b, int side) const {
+    for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+            if (b.IsOccupied(r, c) && b.At(r, c).GetSide() == side)
+                if (!GetValidMoves(b, r, c).empty()) return true;
+    return false;
+}
+
+bool DiagonalChessRule::IsCheckmate(const DiagonalChessBoard& b, int side) const {
+    return IsInCheckRaw(b, side) && !HasLegalMovesRaw(b, side);
+}
+
+bool DiagonalChessRule::HasInsufficientMaterial(const DiagonalChessBoard& b) const {
     int redPieces = 0, blackPieces = 0;
     bool redHasAttack = false, blackHasAttack = false;
-
     for (int r = 0; r < 9; r++) {
         for (int c = 0; c < 9; c++) {
-            if (!b[r][c].alive) continue;
-            if (b[r][c].side == Side::RED) {
+            if (!b.IsOccupied(r, c)) continue;
+            if (b.At(r, c).GetSide() == 0) {
                 redPieces++;
-                if (b[r][c].type != PieceType::GENERAL &&
-                    b[r][c].type != PieceType::ADVISOR) {
-                    redHasAttack = true;
-                }
+                auto t = b.At(r, c).GetDType();
+                if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) redHasAttack = true;
             } else {
                 blackPieces++;
-                if (b[r][c].type != PieceType::GENERAL &&
-                    b[r][c].type != PieceType::ADVISOR) {
-                    blackHasAttack = true;
-                }
+                auto t = b.At(r, c).GetDType();
+                if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) blackHasAttack = true;
             }
         }
     }
-
     if (redPieces <= 1 && blackPieces <= 1) return true;
     if (!redHasAttack && !blackHasAttack) return true;
     return false;
 }
 
-bool DiagonalChessRule::IsGameOver(const Piece b[9][9], Side currentTurn, bool& isDraw, Side& winner) const {
-    if (HasInsufficientMaterial(b)) {
-        isDraw = true;
-        return true;
-    }
-
-    if (!HasLegalMoves(b, currentTurn)) {
-        if (IsInCheck(b, currentTurn)) {
-            winner = (currentTurn == Side::RED) ? Side::BLACK : Side::RED;
+bool DiagonalChessRule::IsGameOverRaw(const DiagonalChessBoard& b, Side side, bool& isDraw, Side& winner) const {
+    int s = static_cast<int>(side);
+    if (HasInsufficientMaterial(b)) { isDraw = true; return true; }
+    if (!HasLegalMovesRaw(b, s)) {
+        if (IsInCheckRaw(b, s)) {
+            winner = (side == Side::RED) ? Side::BLACK : Side::RED;
             isDraw = false;
         } else {
             isDraw = true;
         }
         return true;
     }
-
     return false;
 }

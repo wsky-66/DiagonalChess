@@ -1,62 +1,139 @@
 #include "Engine/Board/DiagonalChessBoard.h"
 #include <cmath>
+#include <cstring>
 
 DiagonalChessBoard::DiagonalChessBoard() {
+    std::memset(occupied, 0, sizeof(occupied));
     PlacePieces();
 }
 
-void DiagonalChessBoard::InitBoard() {
+void DiagonalChessBoard::Clear() {
     for (int r = 0; r < 9; r++) {
         for (int c = 0; c < 9; c++) {
-            board[r][c] = {PieceType::NONE, Side::RED, false};
+            cells[r][c] = DiagonalChessPiece(DChessPieceType::NONE, 0);
+            cells[r][c].SetAlive(false);
+            occupied[r][c] = false;
         }
     }
 }
 
-void DiagonalChessBoard::PlacePieces() {
-    InitBoard();
-
-    board[0][8] = {PieceType::GENERAL, Side::RED, true};
-    board[0][7] = {PieceType::ADVISOR, Side::RED, true};
-    board[1][8] = {PieceType::ADVISOR, Side::RED, true};
-    board[0][6] = {PieceType::ELEPHANT, Side::RED, true};
-    board[2][8] = {PieceType::ELEPHANT, Side::RED, true};
-    board[0][5] = {PieceType::HORSE, Side::RED, true};
-    board[3][8] = {PieceType::HORSE, Side::RED, true};
-    board[0][4] = {PieceType::CHARIOT, Side::RED, true};
-    board[4][8] = {PieceType::CHARIOT, Side::RED, true};
-
-    board[0][3] = {PieceType::CANNON, Side::RED, true};
-    board[5][8] = {PieceType::CANNON, Side::RED, true};
-
-    board[0][2] = {PieceType::SOLDIER, Side::RED, true};
-    board[2][4] = {PieceType::SOLDIER, Side::RED, true};
-    board[2][6] = {PieceType::SOLDIER, Side::RED, true};
-    board[4][6] = {PieceType::SOLDIER, Side::RED, true};
-    board[6][8] = {PieceType::SOLDIER, Side::RED, true};
-
-    board[8][0] = {PieceType::GENERAL, Side::BLACK, true};
-    board[8][1] = {PieceType::ADVISOR, Side::BLACK, true};
-    board[7][0] = {PieceType::ADVISOR, Side::BLACK, true};
-    board[8][2] = {PieceType::ELEPHANT, Side::BLACK, true};
-    board[6][0] = {PieceType::ELEPHANT, Side::BLACK, true};
-    board[8][3] = {PieceType::HORSE, Side::BLACK, true};
-    board[5][0] = {PieceType::HORSE, Side::BLACK, true};
-    board[8][4] = {PieceType::CHARIOT, Side::BLACK, true};
-    board[4][0] = {PieceType::CHARIOT, Side::BLACK, true};
-
-    board[8][5] = {PieceType::CANNON, Side::BLACK, true};
-    board[3][0] = {PieceType::CANNON, Side::BLACK, true};
-
-    board[8][6] = {PieceType::SOLDIER, Side::BLACK, true};
-    board[6][4] = {PieceType::SOLDIER, Side::BLACK, true};
-    board[6][2] = {PieceType::SOLDIER, Side::BLACK, true};
-    board[4][2] = {PieceType::SOLDIER, Side::BLACK, true};
-    board[2][0] = {PieceType::SOLDIER, Side::BLACK, true};
+void DiagonalChessBoard::Reset() {
+    Clear();
+    PlacePieces();
 }
 
-void DiagonalChessBoard::Reset() {
-    PlacePieces();
+void DiagonalChessBoard::PlacePieces() {
+    auto put = [this](int r, int c, DChessPieceType t, int side) {
+        cells[r][c] = DiagonalChessPiece(t, side);
+        occupied[r][c] = true;
+    };
+
+    put(0, 8, DChessPieceType::GENERAL,  0);
+    put(0, 7, DChessPieceType::ADVISOR,  0);
+    put(1, 8, DChessPieceType::ADVISOR,  0);
+    put(0, 6, DChessPieceType::ELEPHANT, 0);
+    put(2, 8, DChessPieceType::ELEPHANT, 0);
+    put(0, 5, DChessPieceType::HORSE,    0);
+    put(3, 8, DChessPieceType::HORSE,    0);
+    put(0, 4, DChessPieceType::CHARIOT,  0);
+    put(4, 8, DChessPieceType::CHARIOT,  0);
+    put(0, 3, DChessPieceType::CANNON,   0);
+    put(5, 8, DChessPieceType::CANNON,   0);
+    put(0, 2, DChessPieceType::SOLDIER,  0);
+    put(2, 4, DChessPieceType::SOLDIER,  0);
+    put(2, 6, DChessPieceType::SOLDIER,  0);
+    put(4, 6, DChessPieceType::SOLDIER,  0);
+    put(6, 8, DChessPieceType::SOLDIER,  0);
+
+    put(8, 0, DChessPieceType::GENERAL,  1);
+    put(8, 1, DChessPieceType::ADVISOR,  1);
+    put(7, 0, DChessPieceType::ADVISOR,  1);
+    put(8, 2, DChessPieceType::ELEPHANT, 1);
+    put(6, 0, DChessPieceType::ELEPHANT, 1);
+    put(8, 3, DChessPieceType::HORSE,    1);
+    put(5, 0, DChessPieceType::HORSE,    1);
+    put(8, 4, DChessPieceType::CHARIOT,  1);
+    put(4, 0, DChessPieceType::CHARIOT,  1);
+    put(8, 5, DChessPieceType::CANNON,   1);
+    put(3, 0, DChessPieceType::CANNON,   1);
+    put(8, 6, DChessPieceType::SOLDIER,  1);
+    put(6, 4, DChessPieceType::SOLDIER,  1);
+    put(6, 2, DChessPieceType::SOLDIER,  1);
+    put(4, 2, DChessPieceType::SOLDIER,  1);
+    put(2, 0, DChessPieceType::SOLDIER,  1);
+}
+
+Piece* DiagonalChessBoard::GetPiece(int r, int c) {
+    return (r >= 0 && r < 9 && c >= 0 && c < 9 && occupied[r][c]) ? &cells[r][c] : nullptr;
+}
+
+const Piece* DiagonalChessBoard::GetPiece(int r, int c) const {
+    return (r >= 0 && r < 9 && c >= 0 && c < 9 && occupied[r][c]) ? &cells[r][c] : nullptr;
+}
+
+void DiagonalChessBoard::SetPiece(int r, int c, std::unique_ptr<Piece> p) {
+    if (!IsInside(r, c)) return;
+    if (p) {
+        auto* dcp = dynamic_cast<DiagonalChessPiece*>(p.get());
+        if (dcp) {
+            cells[r][c] = *dcp;
+            occupied[r][c] = true;
+        }
+    } else {
+        cells[r][c] = DiagonalChessPiece(DChessPieceType::NONE, 0);
+        cells[r][c].SetAlive(false);
+        occupied[r][c] = false;
+    }
+}
+
+std::unique_ptr<Piece> DiagonalChessBoard::TakePiece(int r, int c) {
+    if (!IsInside(r, c) || !occupied[r][c]) return nullptr;
+    auto p = std::make_unique<DiagonalChessPiece>(cells[r][c]);
+    cells[r][c] = DiagonalChessPiece(DChessPieceType::NONE, 0);
+    cells[r][c].SetAlive(false);
+    occupied[r][c] = false;
+    return p;
+}
+
+void DiagonalChessBoard::ForEachPiece(std::function<void(Piece&, int r, int c)> fn) {
+    for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+            if (occupied[r][c]) {
+                fn(cells[r][c], r, c);
+            }
+        }
+    }
+}
+
+void DiagonalChessBoard::CopyTo(DiagonalChessBoard& target) const {
+    target.Clear();
+    for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+            target.cells[r][c] = cells[r][c];
+            target.occupied[r][c] = occupied[r][c];
+        }
+    }
+}
+
+void DiagonalChessBoard::MovePieceInternal(int fromR, int fromC, int toR, int toC) {
+    if (!IsInside(fromR, fromC) || !IsInside(toR, toC)) return;
+    cells[toR][toC] = cells[fromR][fromC];
+    occupied[toR][toC] = true;
+    cells[fromR][fromC] = DiagonalChessPiece(DChessPieceType::NONE, 0);
+    cells[fromR][fromC].SetAlive(false);
+    occupied[fromR][fromC] = false;
+}
+
+void DiagonalChessBoard::ClearCell(int r, int c) {
+    if (!IsInside(r, c)) return;
+    cells[r][c] = DiagonalChessPiece(DChessPieceType::NONE, 0);
+    cells[r][c].SetAlive(false);
+    occupied[r][c] = false;
+}
+
+void DiagonalChessBoard::OccupiedCell(int r, int c) {
+    if (!IsInside(r, c)) return;
+    occupied[r][c] = true;
 }
 
 sf::Vector2f DiagonalChessBoard::GridToScreen(int r, int c) const {

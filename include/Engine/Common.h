@@ -6,24 +6,13 @@
 #include <string>
 #include <stack>
 
-enum class PieceType { NONE, CHARIOT, HORSE, ELEPHANT, ADVISOR, GENERAL, CANNON, SOLDIER };
-
-enum class Side { RED, BLACK };
-
+enum class Side { RED = 0, BLACK = 1 };
 enum class AIDifficulty { EASY, MEDIUM, HARD };
-
 enum class NetState { OFFLINE, HOST_WAITING, CONNECTING, CONNECTED };
-
-struct Piece {
-    PieceType type = PieceType::NONE;
-    Side side = Side::RED;
-    bool alive = false;
-};
 
 struct MoveRecord {
     int fromR, fromC, toR, toC;
-    Piece movedPiece;
-    Piece capturedPiece;
+    int movedType, movedSide, capturedType, capturedSide;
     Side side;
     int prevMovesWithoutCapture;
 };
@@ -52,8 +41,6 @@ struct Particle {
 struct Move {
     int fromR, fromC, toR, toC;
 };
-
-std::wstring GetPieceName(PieceType type, Side side);
 
 static constexpr int DIAG = 40;
 static constexpr float ORIGIN_X = 50.f;

@@ -8,7 +8,7 @@ set(SFML_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SFML-2.6.2")
 
 add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
-    src/Engine/Common.cpp
+    src/Engine/Piece.cpp
     src/Engine/Core/ChessPlatform.cpp
     src/Engine/Core/GameManager.cpp
     src/Engine/Board/DiagonalChessBoard.cpp
