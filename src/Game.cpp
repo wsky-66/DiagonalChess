@@ -118,8 +118,9 @@ void Game::processEvents() {
         }
 
         if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
-            float mx = static_cast<float>(event.mouseButton.x);
-            float my = static_cast<float>(event.mouseButton.y);
+            sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y), view);
+            float mx = worldPos.x;
+            float my = worldPos.y;
 
             float ly = logDividerY;
             if (mx >= 715 && mx <= 1135 && my >= ly - 8 && my <= ly + 8) {
@@ -150,7 +151,8 @@ void Game::processEvents() {
         }
 
         if (event.type == sf::Event::MouseWheelScrolled) {
-            int x = event.mouseWheelScroll.x;
+            sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseWheelScroll.x, event.mouseWheelScroll.y), view);
+            int x = static_cast<int>(worldPos.x);
             if (x >= 715 && x <= 1135) {
                 logScrollOffset -= (int)event.mouseWheelScroll.delta;
             }
@@ -161,8 +163,9 @@ void Game::processEvents() {
         }
 
         if (event.type == sf::Event::MouseMoved) {
-            float mx = static_cast<float>(event.mouseMove.x);
-            float my = static_cast<float>(event.mouseMove.y);
+            sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x, event.mouseMove.y), view);
+            float mx = worldPos.x;
+            float my = worldPos.y;
 
             if (draggingLogDivider) {
                 logDividerY = std::max(395.f, std::min(my, 740.f));
@@ -340,13 +343,6 @@ void Game::render() {
     window.draw(logDivider);
     if (showTutorial) drawTutorialPanel();
     drawNetUI();
-
-    if (!notificationText.empty() && notificationTimer > 0.f) {
-        float alpha = std::min(notificationTimer / 3.f, 1.f) * 255.f;
-        sf::Color notifColor(255, 180, 100, static_cast<sf::Uint8>(alpha));
-        drawTextWithShadow(notificationText, 940, logDividerY - 15, 15, notifColor, true);
-    }
-
     drawMoveLog();
 
     if (showSurrenderPopup) drawSurrenderPopup();
@@ -875,6 +871,7 @@ void Game::undoMove() {
             currentTurn = record.side;
             if (!moveLogStrings.empty()) moveLogStrings.pop_back();
         }
+        moveLogStrings.push_back(L"\u6094\u68cb");
     } else {
         MoveRecord record = moveHistory.top();
         moveHistory.pop();
@@ -887,6 +884,7 @@ void Game::undoMove() {
         }
         currentTurn = record.side;
         if (!moveLogStrings.empty()) moveLogStrings.pop_back();
+        moveLogStrings.push_back(L"\u6094\u68cb");
     }
 
     pieceSelected = false;
@@ -896,6 +894,7 @@ void Game::undoMove() {
 
 void Game::restartGame() {
     placePieces();
+    moveLogStrings.push_back(L"\u91cd\u65b0\u5f00\u59cb");
     pieceSelected = false;
     validMoves.clear();
     undoRequestSent = false;
@@ -916,6 +915,7 @@ void Game::doSurrender(Side side) {
     isDrawGame = false;
     surrendered = true;
     gameOverTimer = 0.f;
+    moveLogStrings.push_back((side == Side::RED) ? L"\u7ea2\u65b9\u8ba4\u8f93" : L"\u9ed1\u65b9\u8ba4\u8f93");
     createWinParticles(winner);
     if (winner == Side::RED) {
         playWinSound();
@@ -930,6 +930,7 @@ void Game::doDraw() {
     surrendered = false;
     agreedDraw = true;
     gameOverTimer = 0.f;
+    moveLogStrings.push_back(L"\u548c\u68cb");
     createDrawParticles();
     playDrawSound();
 }
@@ -1347,6 +1348,18 @@ void Game::drawUI() {
 
     if (aiThinking) {
         drawText(L"AI\u601d\u8003\u4e2d...", 925, 210, 18, sf::Color(200, 180, 150), true);
+    }
+
+    if (!notificationText.empty() && notificationTimer > 0.f) {
+        float alpha = std::min(notificationTimer / 3.f, 1.f) * 255.f;
+        sf::Color notifColor(255, 100, 60, static_cast<sf::Uint8>(alpha));
+        sf::RectangleShape notifBg(sf::Vector2f(300, 30));
+        notifBg.setPosition(820, 170);
+        notifBg.setFillColor(sf::Color(180, 60, 30, static_cast<sf::Uint8>(alpha * 0.6f)));
+        notifBg.setOutlineColor(sf::Color(255, 100, 50, static_cast<sf::Uint8>(alpha * 0.8f)));
+        notifBg.setOutlineThickness(2);
+        window.draw(notifBg);
+        drawTextWithShadow(notificationText, 970, 185, 16, notifColor, true);
     }
 }
 
