@@ -40,7 +40,7 @@ public:
     using RestartRequestCallback = std::function<void()>;
     using SurrenderRequestCallback = std::function<void()>;
     using DrawRequestCallback = std::function<void()>;
-    using UndoAcceptCallback = std::function<void(int)>;
+    using UndoAcceptCallback = std::function<void()>;
     using RestartAcceptCallback = std::function<void()>;
     using SurrenderAcceptCallback = std::function<void()>;
     using DrawAcceptCallback = std::function<void()>;
@@ -53,6 +53,8 @@ public:
     SurrenderRequestCallback onSurrenderRequestReceived;
     DrawRequestCallback onDrawRequestReceived;
     UndoAcceptCallback onUndoAccepted;
+    using UndoAckCallback = std::function<void(int steps)>;
+    UndoAckCallback onUndoAckReceived;
     RestartAcceptCallback onRestartAccepted;
     SurrenderAcceptCallback onSurrenderAccepted;
     DrawAcceptCallback onDrawAccepted;

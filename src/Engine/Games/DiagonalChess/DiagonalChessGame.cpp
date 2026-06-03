@@ -52,15 +52,16 @@ void DiagonalChessGame::SetupNetworkCallbacks() {
     network.onUndoRequestReceived = [this]() {};
     network.onRestartRequestReceived = [this]() {};
 
-    network.onUndoAccepted = [this](int steps) {
+    network.onUndoAccepted = [this]() {
         if (gameOver || moveHistory.empty()) return;
-        if (steps == 1) {
-            int actualSteps = (moveHistory.top().side == network.GetNetSide()) ? 1 : 2;
-            ApplyUndoSteps(actualSteps);
-            network.SendUndoAck(actualSteps);
-        } else {
-            ApplyUndoSteps(steps);
-        }
+        int steps = (moveHistory.top().side == network.GetNetSide()) ? 1 : 2;
+        ApplyUndoSteps(steps);
+        network.SendUndoAck(steps);
+    };
+
+    network.onUndoAckReceived = [this](int steps) {
+        if (gameOver) return;
+        ApplyUndoSteps(steps);
     };
 
     network.onRestartAccepted = [this]() { if (!gameOver) RestartGame(); };

@@ -158,7 +158,7 @@ void NetworkManager::PollNetwork() {
             case 1: { // Undo request
                 if (undoRequestSent) {
                     undoRequestSent = false;
-                    if (onUndoAccepted) onUndoAccepted(1); // will determine steps internally
+                    if (onUndoAccepted) onUndoAccepted();
                 } else {
                     undoRequestReceived = true;
                     undoRequesterSide = (netSide == Side::RED) ? Side::BLACK : Side::RED;
@@ -168,7 +168,7 @@ void NetworkManager::PollNetwork() {
             }
             case 2: // Undo accept
                 undoRequestSent = false;
-                if (onUndoAccepted) onUndoAccepted(1);
+                if (onUndoAccepted) onUndoAccepted();
                 break;
             case 3: // Undo reject
                 undoRequestSent = false;
@@ -194,7 +194,7 @@ void NetworkManager::PollNetwork() {
             case 7: { // Undo ack
                 int steps;
                 packet >> steps;
-                if (onUndoAccepted) onUndoAccepted(steps);
+                if (onUndoAckReceived) onUndoAckReceived(steps);
                 break;
             }
             case 8: // Restart ack
