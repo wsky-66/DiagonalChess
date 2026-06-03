@@ -53,13 +53,24 @@ After refactoring, a **4-layer component architecture** splits the original Game
 ┌────▼────┐  ┌──────▼──────┐ ┌────▼───┐  ┌──────▼──────┐ ┌────▼────┐  ┌─────▼──────┐
 │  Board  │  │    Rule     │ │   AI   │  │  Network    │ │   UI    │  │   Audio    │
 │  棋盘   │  │    规则     │ │  决策  │  │    联机     │ │  界面   │  │   音效     │
-└─────────┘  └─────────────┘ └────────┘  └─────────────┘ └─────────┘  └────────────┘
-                                                                          │
-                                                                    ┌─────▼──────┐
-                                                                    │  Particle  │
-                                                                    │    System  │
-                                                                    │    粒子特效 │
-                                                                    └────────────┘
+│ (接口)  │  │  (接口)     │ │        │  │             │ │         │  │            │
+│         │  │             │ │        │  │             │ │         │  │            │
+│GetPiece│  │IsValidMove│ │Think  │  │SendMove  │          │  │PlayMove  │
+│SetPiece│  │IsGameOver │          │  │PollNetwork│          │  │PlayClick │
+│MovePiece│ │HasLegalMvs│          │  │Callbacks  │          │  │            │
+└────┬─────┘  └─────────────┘ └────────┘  └─────────────┘ └─────────┘  └────────────┘
+     │                                                                        │
+     │                                                                  ┌─────▼──────┐
+     │                                                                  │  Particle  │
+┌────▼──────┐                                                           │    System  │
+│   Piece   │ ← 抽象基类, 各棋种子类化                                    │    粒子特效 │
+│  (棋子)   │    DiagonalChessPiece / 未来可以还有 ChessPiece 等           └────────────┘
+│           │
+│GetSymbol│
+│GetType  │
+│GetValue │
+│Clone    │
+└──────────┘
 ```
 
 ---
@@ -72,22 +83,35 @@ testchess/                                       项目根目录
 ├── include/Engine/                              头文件
 │   │
 │   ├── Common.h                                 共享类型定义（通用声明）
-│   │   ├── PieceType     棋子种类枚举（车/马/象/士/将/炮/兵）
 │   │   ├── Side          阵营枚举（红方/黑方）
 │   │   ├── AIDifficulty  AI 难度枚举（简单/中等/困难）
 │   │   ├── NetState      联机状态枚举（离线/等待/连接中/已连接）
-│   │   ├── Piece         棋子结构体（类型 + 阵营 + 存活）
-│   │   ├── MoveRecord    走棋记录结构体（起止坐标 + 移动/被吃棋子 + 回合）
+│   │   ├── MoveRecord    走棋记录结构体（起止坐标 + 棋子类型/阵营）
 │   │   ├── AIMove        AI 走法结构体（起止坐标 + 评分）
 │   │   ├── UIButton      按钮结构体（矩形区域 + 文本 + 悬停/禁用状态）
 │   │   ├── Particle      粒子结构体（位置/速度/颜色/生命/大小）
 │   │   ├── Move          走法结构体（起止坐标）
-│   │   ├── GetPieceName()棋子名称工具函数（返回 Unicode 文字）
 │   │   └── 棋盘常量      (DIAG=40 格距, ORIGIN_X=50 原点, WIN_W=1150 窗口宽,
 │   │                       PIECE_R=20 棋子半径, DRAW_LIMIT=120 自然限着步数 ...)
 │   │
-│   ├── Board.h                                  Board 棋盘抽象基类
-│   │   └── GetRows() / GetCols() / Reset()     行数/列数/重置
+│   ├── Piece.h                                   Piece 棋子抽象基类
+│   │   ├── GetSide() / IsAlive() / IsSameSide()  阵营/存活/同阵营判断
+│   │   ├── GetSymbol() → wstring     棋子符号（虚函数，各棋种实现）
+│   │   ├── GetType()   → int         棋子类型（虚函数，各棋种定义自己的常量）
+│   │   ├── GetValue()  → int         子力价值（虚函数）
+│   │   ├── Clone() → unique_ptr      深拷贝（虚函数，AI 搜索用）
+│   │   └── DiagonalChessPiece        对角象棋棋子子类
+│   │       ├── type: DChessPieceType  (NONE/CHARIOT/HORSE/ELEPHANT/ADVISOR/GENERAL/CANNON/SOLDIER)
+│   │       ├── GetSymbol() → "帥"/"將"/"車"/"馬"/"相"/"仕"/"炮"/"兵" ...
+│   │       └── GetValue()  → 10000/900/400/200/450/100
+│   │
+│   ├── Board.h                                   Board 棋盘抽象接口
+│   │   ├── GetRows() / GetCols()                 行列数
+│   │   ├── GetPiece(r,c) → Piece*               获取棋子（只读/读写）
+│   │   ├── SetPiece(r,c, unique_ptr<Piece>)     放置棋子
+│   │   ├── TakePiece(r,c) → unique_ptr<Piece>   取出棋子
+│   │   ├── Clear() / Reset()                    清空/重置
+│   │   └── ForEachPiece(fn)                     遍历所有活子
 │   │
 │   ├── Rule.h                                   Rule 规则抽象基类
 │   │   └── IsValidMove() / IsGameOver() / IsInCheck() / HasLegalMoves()
@@ -109,10 +133,15 @@ testchess/                                       项目根目录
 │   │       ├── Run()                             驱动主循环
 │   │       └── RegisterGame(factory)             注册棋类工厂
 │   │
-│   ├── Board/DiagonalChessBoard.h          对角象棋棋盘（对角象棋棋盘类）
-│   │   ├── GetBoard()                 获取 9×9 棋子数组引用
-│   │   ├── GridToScreen(r, c)         坐标转换：网格 → 屏幕
-│   │   └── ScreenToGrid(x, y)         坐标转换：屏幕 → 网格
+│   ├── Board/DiagonalChessBoard.h          对角象棋棋盘（实现 Board 接口）
+│   │   ├── DiagonalChessPiece cells[9][9] 值类型存储（栈上，AI 拷贝快）
+│   │   ├── bool occupied[9][9]            占位标记
+│   │   ├── IsOccupied(r,c) / At(r,c)      快速读写棋子
+│   │   ├── MovePieceInternal()            内部走子（连带更新 occupied）
+│   │   ├── ClearCell() / OccupiedCell()   单格操作
+│   │   ├── CopyTo(other)                  全盘深拷贝（AI 搜索用）
+│   │   ├── GridToScreen(r, c)             坐标转换：网格 → 屏幕
+│   │   └── ScreenToGrid(x, y)             坐标转换：屏幕 → 网格
 │   │
 │   ├── Rule/DiagonalChessRule.h            对角象棋规则引擎（对角象棋规则类）
 │   │   ├── GetValidMoves(b, r, c)    获取某棋子全部合法走法
@@ -201,8 +230,8 @@ testchess/                                       项目根目录
 │           └── Create() → make_unique<DiagonalChessGame>()
 │
 ├── src/Engine/                                  源代码（对应 .cpp 实现）
-│   ├── Common.cpp                               棋子名称工具函数实现
-│   ├── Board/DiagonalChessBoard.cpp             棋盘初始化 + 坐标转换
+│   ├── Piece.cpp                                棋子基类 + 对角象棋棋子实现
+│   ├── Board/DiagonalChessBoard.cpp             棋盘初始化 + 坐标转换 + 占位管理
 │   ├── Rule/DiagonalChessRule.cpp               规则引擎（走法/将军/终局判定）
 │   ├── AI/DiagonalChessAI.cpp                   Minimax + Alpha-Beta 搜索
 │   ├── Network/NetworkManager.cpp               TCP 联机 + 消息协议
