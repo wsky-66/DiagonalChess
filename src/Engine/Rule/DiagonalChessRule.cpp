@@ -63,10 +63,10 @@ bool DiagonalChessRule::IsBlockedHorse(const DiagonalChessBoard& b, int fr, int 
     int dc = tc - fc;
     if (std::abs(dr) == 2) {
         int blockR = fr + (dr > 0 ? 1 : -1);
-        return b.At(blockR, fc).IsAlive();
+        return b.IsOccupied(blockR, fc) && b.At(blockR, fc).IsAlive();
     }
     int blockC = fc + (dc > 0 ? 1 : -1);
-    return b.At(fr, blockC).IsAlive();
+    return b.IsOccupied(fr, blockC) && b.At(fr, blockC).IsAlive();
 }
 
 bool DiagonalChessRule::CanElephantMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
@@ -79,7 +79,7 @@ bool DiagonalChessRule::CanElephantMove(const DiagonalChessBoard& b, int fr, int
 bool DiagonalChessRule::IsBlockedElephant(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
     int midR = (fr + tr) / 2;
     int midC = (fc + tc) / 2;
-    return b.At(midR, midC).IsAlive();
+    return b.IsOccupied(midR, midC) && b.At(midR, midC).IsAlive();
 }
 
 bool DiagonalChessRule::CanAdvisorMove(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc) const {
@@ -197,7 +197,7 @@ bool DiagonalChessRule::HasInsufficientMaterial(const DiagonalChessBoard& b) con
             else blackHasAttack = true;
         }
     }
-    return !redHasAttack || !blackHasAttack;
+    return !redHasAttack && !blackHasAttack;
 }
 
 bool DiagonalChessRule::SideHasNoAttack(const DiagonalChessBoard& b, int side) const {
@@ -213,6 +213,11 @@ bool DiagonalChessRule::SideHasNoAttack(const DiagonalChessBoard& b, int side) c
 
 bool DiagonalChessRule::IsGameOverRaw(const DiagonalChessBoard& b, Side side, bool& isDraw, Side& winner) const {
     int s = static_cast<int>(side);
+    if (HasInsufficientMaterial(b)) {
+        isDraw = true;
+        winner = Side::RED;
+        return true;
+    }
     if (SideHasNoAttack(b, s)) {
         isDraw = false;
         winner = (side == Side::RED) ? Side::BLACK : Side::RED;

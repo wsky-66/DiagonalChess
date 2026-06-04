@@ -25,13 +25,15 @@ AIMove DiagonalChessAI::Think(const DiagonalChessBoard& orig, int aiSide, const 
         auto captured = temp.At(m.toR, m.toC);
         auto moved = temp.At(m.fromR, m.fromC);
         temp.At(m.toR, m.toC) = moved;
-        temp.At(m.fromR, m.fromC) = DiagonalChessPiece(DChessPieceType::NONE, 0);
-        temp.At(m.fromR, m.fromC).SetAlive(false);
+        temp.OccupiedCell(m.toR, m.toC);
+        temp.ClearCell(m.fromR, m.fromC);
 
         int score = Minimax(temp, aiDepth - 1, -999999, 999999, aiSide != 0, aiSide, rule);
 
         temp.At(m.fromR, m.fromC) = moved;
-        temp.At(m.toR, m.toC) = captured;
+        temp.OccupiedCell(m.fromR, m.fromC);
+        if (captured.IsAlive()) { temp.At(m.toR, m.toC) = captured; temp.OccupiedCell(m.toR, m.toC); }
+        else { temp.ClearCell(m.toR, m.toC); }
 
         if (aiSide == 0) { if (score > bestScore) { bestScore = score; best = m; } }
         else            { if (score < bestScore) { bestScore = score; best = m; } }
@@ -63,6 +65,7 @@ std::vector<AIMove> DiagonalChessAI::GenerateAllMoves(const DiagonalChessBoard& 
 int DiagonalChessAI::Evaluate(const DiagonalChessBoard& b) const {
     bool redGen = false, blackGen = false;
     int score = 0;
+    bool redHasAttack = false, blackHasAttack = false;
     for (int r = 0; r < 9; r++) {
         for (int c = 0; c < 9; c++) {
             if (!b.IsOccupied(r, c)) continue;
@@ -71,6 +74,10 @@ int DiagonalChessAI::Evaluate(const DiagonalChessBoard& b) const {
                 if (b.At(r, c).GetSide() == 0) redGen = true;
                 else blackGen = true;
             }
+            if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) {
+                if (b.At(r, c).GetSide() == 0) redHasAttack = true;
+                else blackHasAttack = true;
+            }
             int val = GetPieceValue(t) + GetPositionBonus(t, r, c, b.At(r, c).GetSide());
             if (b.At(r, c).GetSide() == 0) score += val;
             else score -= val;
@@ -78,6 +85,9 @@ int DiagonalChessAI::Evaluate(const DiagonalChessBoard& b) const {
     }
     if (!redGen) return -100000;
     if (!blackGen) return 100000;
+    if (!redHasAttack && !blackHasAttack) return 0;
+    if (!redHasAttack) return -50000;
+    if (!blackHasAttack) return 50000;
     return score;
 }
 
@@ -94,13 +104,15 @@ int DiagonalChessAI::Minimax(DiagonalChessBoard& b, int depth, int alpha, int be
             auto captured = b.At(m.toR, m.toC);
             auto moved = b.At(m.fromR, m.fromC);
             b.At(m.toR, m.toC) = moved;
-            b.At(m.fromR, m.fromC) = DiagonalChessPiece(DChessPieceType::NONE, 0);
-            b.At(m.fromR, m.fromC).SetAlive(false);
+            b.OccupiedCell(m.toR, m.toC);
+            b.ClearCell(m.fromR, m.fromC);
 
             int eval = Minimax(b, depth - 1, alpha, beta, false, aiSide, rule);
 
             b.At(m.fromR, m.fromC) = moved;
-            b.At(m.toR, m.toC) = captured;
+            b.OccupiedCell(m.fromR, m.fromC);
+            if (captured.IsAlive()) { b.At(m.toR, m.toC) = captured; b.OccupiedCell(m.toR, m.toC); }
+            else { b.ClearCell(m.toR, m.toC); }
 
             maxEval = std::max(maxEval, eval);
             alpha = std::max(alpha, eval);
@@ -113,13 +125,15 @@ int DiagonalChessAI::Minimax(DiagonalChessBoard& b, int depth, int alpha, int be
             auto captured = b.At(m.toR, m.toC);
             auto moved = b.At(m.fromR, m.fromC);
             b.At(m.toR, m.toC) = moved;
-            b.At(m.fromR, m.fromC) = DiagonalChessPiece(DChessPieceType::NONE, 0);
-            b.At(m.fromR, m.fromC).SetAlive(false);
+            b.OccupiedCell(m.toR, m.toC);
+            b.ClearCell(m.fromR, m.fromC);
 
             int eval = Minimax(b, depth - 1, alpha, beta, true, aiSide, rule);
 
             b.At(m.fromR, m.fromC) = moved;
-            b.At(m.toR, m.toC) = captured;
+            b.OccupiedCell(m.fromR, m.fromC);
+            if (captured.IsAlive()) { b.At(m.toR, m.toC) = captured; b.OccupiedCell(m.toR, m.toC); }
+            else { b.ClearCell(m.toR, m.toC); }
 
             minEval = std::min(minEval, eval);
             beta = std::min(beta, eval);

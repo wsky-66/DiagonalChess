@@ -240,6 +240,7 @@ void GomokuGame::RestartGame() {
     while (!moveHistory.empty()) moveHistory.pop();
     hoverR = -1;
     hoverC = -1;
+    mouseOnBoard = false;
 }
 
 void GomokuGame::Reset() {

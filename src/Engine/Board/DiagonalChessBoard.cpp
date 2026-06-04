@@ -4,6 +4,9 @@
 
 DiagonalChessBoard::DiagonalChessBoard() {
     std::memset(occupied, 0, sizeof(occupied));
+    for (int r = 0; r < 9; r++)
+        for (int c = 0; c < 9; c++)
+            cells[r][c].SetAlive(false);
     PlacePieces();
 }
 

@@ -29,8 +29,10 @@ DiagonalChessGame::~DiagonalChessGame() { network.Disconnect(); }
 void DiagonalChessGame::SetupNetworkCallbacks() {
     network.onMoveReceived = [this](int fr, int fc, int tr, int tc) {
         if (gameOver) return;
-        if (network.undoRequestSent || network.restartRequestSent ||
-            network.surrenderRequestSent || network.drawRequestSent) return;
+        if (network.undoRequestSent || network.undoRequestReceived ||
+            network.restartRequestSent || network.restartRequestReceived ||
+            network.surrenderRequestSent || network.surrenderRequestReceived ||
+            network.drawRequestSent || network.drawRequestReceived) return;
         receivingMove = true;
         ExecuteMove(fr, fc, tr, tc);
         receivingMove = false;
@@ -53,7 +55,11 @@ void DiagonalChessGame::SetupNetworkCallbacks() {
     network.onDrawAccepted = [this]() { if (!gameOver) DoDraw(); };
 
     network.onRejected = [this](const std::wstring& msg) { ui.SetNotification(msg, 3.f); };
-    network.onDisconnected = [this]() { network.Disconnect(); ui.SetLogDividerY(440.f); };
+    network.onDisconnected = [this]() {
+        network.Disconnect();
+        ui.SetLogDividerY(440.f);
+        ui.onlineBtn.label = L"\u8054\u673A: \u5173";
+    };
 }
 
 void DiagonalChessGame::Update(float dt) {
@@ -405,6 +411,10 @@ void DiagonalChessGame::CheckGameEnd() {
         gameOver = true; isDrawGame = true; gameOverTimer = 0.f;
         particles.CreateDrawParticles(); audio.PlayDrawSound(); return;
     }
+    if (rule.HasInsufficientMaterial(board)) {
+        gameOver = true; isDrawGame = true; gameOverTimer = 0.f;
+        particles.CreateDrawParticles(); audio.PlayDrawSound(); return;
+    }
     if (rule.SideHasNoAttack(board, currentTurn)) {
         gameOver = true; isDrawGame = false; gameOverTimer = 0.f;
         winner = (currentTurn == 0) ? Side::BLACK : Side::RED;
@@ -422,7 +432,7 @@ void DiagonalChessGame::CheckGameEnd() {
 
 void DiagonalChessGame::DoAITurn() {
     auto best = ai.Think(board, aiSide, rule);
-    if (best.fromR < 0) return;
+    if (best.fromR < 0) { CheckGameEnd(); return; }
     ExecuteMove(best.fromR, best.fromC, best.toR, best.toC);
 }
 

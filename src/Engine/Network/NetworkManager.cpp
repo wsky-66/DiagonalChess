@@ -26,7 +26,6 @@ void NetworkManager::StartClient(const std::wstring& ip) {
         netState = NetState::CONNECTED;
         netSide = Side::BLACK;
         ResetRequests();
-        onRestartAccepted(); // Triggers game restart
     }
 }
 
