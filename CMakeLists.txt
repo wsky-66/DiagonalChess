@@ -4,7 +4,7 @@ project(DiagonalChess LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(SFML_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SFML-2.6.2")
+set(SFML_DIR "C:/msys64/ucrt64")
 
 add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
@@ -20,6 +20,9 @@ add_executable(${PROJECT_NAME} WIN32
     src/Engine/Audio/AudioManager.cpp
     src/Engine/Effects/ParticleSystem.cpp
     src/Engine/Games/DiagonalChess/DiagonalChessGame.cpp
+    src/Engine/Board/GomokuBoard.cpp
+    src/Engine/Rule/GomokuRule.cpp
+    src/Engine/Games/Gomoku/GomokuGame.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -46,11 +49,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/sfml-graphics-d-2.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/sfml-graphics-2.dll>"
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/sfml-window-d-2.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/sfml-window-2.dll>"
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/sfml-system-d-2.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/sfml-system-2.dll>"
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/sfml-audio-d-2.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/sfml-audio-2.dll>"
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/sfml-network-d-2.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/sfml-network-2.dll>"
-        "$<$<CONFIG:Debug>:${SFML_DIR}/bin/openal32.dll>$<$<CONFIG:Release>:${SFML_DIR}/bin/openal32.dll>"
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        "${SFML_DIR}/bin/libsfml-graphics-2.dll"
+        "${SFML_DIR}/bin/libsfml-window-2.dll"
+        "${SFML_DIR}/bin/libsfml-system-2.dll"
+        "${SFML_DIR}/bin/libsfml-audio-2.dll"
+        "${SFML_DIR}/bin/libsfml-network-2.dll"
+        "${SFML_DIR}/bin/libopenal-1.dll"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
 )
