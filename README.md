@@ -30,7 +30,12 @@ After refactoring, a **4-layer component architecture** splits the original Game
 
 ```
                          ┌──────────────────────────┐
-                         │   ChessPlatform  平台入口 │ ← 程序入口 / 主循环 / 注册棋类
+                         │ MainMenuScene  主菜单     │ ← 游戏选择界面 / game launcher
+                         └──────────┬───────────────┘
+                                    │ 点击游戏卡片 / click tile
+                                    ▼
+                         ┌──────────────────────────┐
+                         │   ChessPlatform  平台入口 │ ← 主循环 / 场景切换 / 注册棋类
                          └──────────┬───────────────┘
                                     │
                          ┌──────────▼───────────────┐
@@ -38,7 +43,7 @@ After refactoring, a **4-layer component architecture** splits the original Game
                          └──────────┬───────────────┘
                                     │
                          ┌──────────▼───────────────┐
-                         │   Game  游戏（抽象基类）   │ ← Scene 接口: Update / Render / Reset
+                         │   Game  游戏（抽象基类）   │ ← Scene 接口: Update / Render / Reset / IsRunning
                          └──────────┬───────────────┘
                                     │
                     ┌───────────────┼───────────────┐
@@ -185,14 +190,15 @@ testchess/                                       项目根目录
 │   │   ├── DrawBoard()               绘制棋盘背景 / 网格线 / 九宫斜线 / 星位点
 │   │   ├── DrawPieces()              绘制棋子（阴影 / 底色 / 高光 / 选中框 / 可行走标记）
 │   │   ├── DrawUI()                  绘制标题栏 / 回合指示 / 将军警告 / AI 思考提示
-│   │   ├── DrawButtons()             绘制全部按钮（含请求弹窗）
-│   │   ├── DrawMoveLog()             走棋记录滚动面板
-│   │   ├── DrawGameOverEffect()      结算覆盖层（绝杀/困毙/认输/和棋 + 重新开始按钮）
-│   │   ├── DrawNetUI()               联机状态面板（IP 输入/等待/已连接）
-│   │   ├── DrawTutorialPanel()       新手教程面板
-│   │   ├── DrawSurrenderPopup()      认输弹窗（选红/黑方）
-│   │   ├── DrawText() / DrawTextWithShadow()  文字/带阴影文字渲染
-│   │   └── UpdateHover()             按钮悬停检测
+│   │   ├── DrawButtons() / DrawRequestPopups() 按钮 / 请求弹窗
+│   │   ├── DrawMoveLog() / DrawGameOverEffect()
+│   │   ├── DrawNetUI() / DrawTutorialPanel() / DrawSurrenderPopup()
+│   │   └── DrawText() / UpdateHover() 文字渲染 / 悬停检测
+│   │
+│   ├── UI/MainMenuScene.h                  主菜单场景（前端平台 UI）
+│   │   ├── 列出所有已注册的游戏工厂
+│   │   ├── 点击卡片 → HasPickedGame() → GetPickedGame()
+│   │   └── ChessPlatform 读取→ GameManager::StartGame()
 │   │
 │   ├── Audio/AudioManager.h               音效管理器（音效管理类）
 │   │   ├── PlayMoveSound()           走子音效 (800Hz / 0.1s)
@@ -236,13 +242,14 @@ testchess/                                       项目根目录
 │   ├── AI/DiagonalChessAI.cpp                   Minimax + Alpha-Beta 搜索
 │   ├── Network/NetworkManager.cpp               TCP 联机 + 消息协议
 │   ├── UI/UIManager.cpp                         界面渲染（棋盘/按钮/面板/教程/认输弹窗）
+│   ├── UI/MainMenuScene.cpp                     主菜单场景（游戏选择列表 UI）
 │   ├── Audio/AudioManager.cpp                   音效程序化合成
 │   ├── Effects/ParticleSystem.cpp               粒子物理更新 + 渲染
 │   ├── Core/ChessPlatform.cpp                   平台主循环
 │   ├── Core/GameManager.cpp                     游戏实例管理
 │   └── Games/DiagonalChess/DiagonalChessGame.cpp对角象棋（事件/走棋/联机/回合流程）
 │
-├── src/main.cpp                                 程序入口（注册工厂 → 启动平台）
+├── src/main.cpp                                 程序入口（注册工厂 → 启动平台 → 主菜单 → 游戏）
 ├── CMakeLists.txt                               CMake 构建配置
 └── README.md                                    本文件
 ```
@@ -340,13 +347,26 @@ ParticleSystem（粒子系统）
 ### 8. 平台层 Platform Layer
 
 ```
-ChessPlatform（平台入口） + GameManager（游戏管理器） + IGameFactory（工厂接口）
+MainMenuScene + ChessPlatform + GameManager + IGameFactory
 ```
 
-- **ChessPlatform**：程序入口，拥有主循环（`sf::Clock`），驱动当前 Game 的 Update/Render
+- **MainMenuScene**：前端菜单场景，列出所有注册的游戏，点击启动
+- **ChessPlatform**：程序入口，拥有菜单→游戏→菜单的循环，通过 `RunScene()` 驱动任意 Scene
 - **GameManager**：管理 `vector<unique_ptr<IGameFactory>>`，根据名称创建游戏实例
 - **IGameFactory**：每个棋种提供一个工厂，返回 `unique_ptr<Game>`
-- 扩展新棋种只需实现工厂接口并注册即可
+- 扩展新棋种只需实现工厂接口并注册即可；菜单会自动显示新游戏
+
+### 9. 启动流程 Launch Flow
+
+```
+main() → ChessPlatform::Run()
+    ├→ 显示 MainMenuScene（列出所有注册的游戏）
+    ├→ 用户点击游戏卡片
+    ├→ MainMenuScene 关闭 → ChessPlatform 读取 launchTarget
+    ├→ GameManager::StartGame(name) → 创建具体 Game 实例
+    ├→ RunScene(game) → 驱动 Game 的 Update / Render 循环
+    └→ Game 退出 → 回到 MainMenuScene（循环）
+```
 
 ---
 
