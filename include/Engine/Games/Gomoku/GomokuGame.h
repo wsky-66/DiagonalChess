@@ -91,6 +91,7 @@ private:
     RectButton undoBtn;
     RectButton surrenderBtn;
     RectButton gameOverRestartBtn;
+    RectButton closeBtn;
 
     // 游戏结束动画计时
     float gameOverTimer;

@@ -217,6 +217,10 @@ void DiagonalChessGame::HandleBoardClick(int r, int c) {
 }
 
 void DiagonalChessGame::HandleButtonClick(float mx, float my) {
+    if (ui.closeBtn.bounds.contains(mx, my)) {
+        audio.PlayClickSound(); window.close(); return;
+    }
+
     if (ui.IsShowTutorial() && mx >= 1090 && mx <= 1140 && my >= 4 && my <= 32) {
         ui.SetShowTutorial(false); audio.PlayClickSound(); return;
     }

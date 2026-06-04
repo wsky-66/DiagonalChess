@@ -10,29 +10,30 @@ UIManager::UIManager() {
 
 void UIManager::Init(sf::RenderWindow& w, sf::Font& f, bool ok) {
     window = &w; font = &f; fontLoaded = ok;
-    undoBtn = {sf::FloatRect(730, 240, 95, 44), L"\u6094\u68CB", false, false};
-    restartBtn = {sf::FloatRect(835, 240, 95, 44), L"\u91CD\u5F00", false, false};
-    aiBtn = {sf::FloatRect(730, 290, 95, 44), L"AI: \u5173", false, false};
-    difficultyBtn = {sf::FloatRect(835, 290, 95, 44), L"\u4E2D\u7B49", false, false};
-    onlineBtn = {sf::FloatRect(730, 340, 95, 44), L"\u8054\u673A: \u5173", false, false};
-    tutorialBtn = {sf::FloatRect(835, 340, 95, 44), L"\u6559\u7A0B", false, false};
-    surrenderBtn = {sf::FloatRect(730, 390, 95, 44), L"\u8BA4\u8F93", false, false};
-    drawOfferBtn = {sf::FloatRect(835, 390, 95, 44), L"\u548C\u68CB", false, false};
-    hostBtn = {sf::FloatRect(730, 440, 95, 44), L"\u521B\u5EFA\u623F\u95F4", false, false};
-    joinBtn = {sf::FloatRect(835, 440, 95, 44), L"\u52A0\u5165\u623F\u95F4", false, false};
-    connectBtn = {sf::FloatRect(730, 530, 200, 44), L"\u8FDE\u63A5", false, false};
-    disconnectBtn = {sf::FloatRect(730, 440, 200, 44), L"\u65AD\u5F00\u8FDE\u63A5", false, false};
+    undoBtn = {sf::FloatRect(730, 255, 95, 44), L"\u6094\u68CB", false, false};
+    restartBtn = {sf::FloatRect(835, 255, 95, 44), L"\u91CD\u5F00", false, false};
+    aiBtn = {sf::FloatRect(730, 305, 95, 44), L"AI: \u5173", false, false};
+    difficultyBtn = {sf::FloatRect(835, 305, 95, 44), L"\u4E2D\u7B49", false, false};
+    onlineBtn = {sf::FloatRect(730, 355, 95, 44), L"\u8054\u673A: \u5173", false, false};
+    tutorialBtn = {sf::FloatRect(835, 355, 95, 44), L"\u6559\u7A0B", false, false};
+    surrenderBtn = {sf::FloatRect(730, 405, 95, 44), L"\u8BA4\u8F93", false, false};
+    drawOfferBtn = {sf::FloatRect(835, 405, 95, 44), L"\u548C\u68CB", false, false};
+    hostBtn = {sf::FloatRect(730, 455, 95, 44), L"\u521B\u5EFA\u623F\u95F4", false, false};
+    joinBtn = {sf::FloatRect(835, 455, 95, 44), L"\u52A0\u5165\u623F\u95F4", false, false};
+    connectBtn = {sf::FloatRect(730, 545, 200, 44), L"\u8FDE\u63A5", false, false};
+    disconnectBtn = {sf::FloatRect(730, 455, 200, 44), L"\u65AD\u5F00\u8FDE\u63A5", false, false};
     gameOverRestartBtn = {sf::FloatRect(0, 0, 200, 50), L"\u91CD\u65B0\u5F00\u59CB", false, false};
-    undoAcceptBtn = {sf::FloatRect(730, 240, 95, 44), L"\u540C\u610F", false, false};
-    undoRejectBtn = {sf::FloatRect(835, 240, 95, 44), L"\u62D2\u7EDD", false, false};
-    restartAcceptBtn = {sf::FloatRect(730, 290, 95, 44), L"\u540C\u610F", false, false};
-    restartRejectBtn = {sf::FloatRect(835, 290, 95, 44), L"\u62D2\u7EDD", false, false};
+    undoAcceptBtn = {sf::FloatRect(730, 255, 95, 44), L"\u540C\u610F", false, false};
+    undoRejectBtn = {sf::FloatRect(835, 255, 95, 44), L"\u62D2\u7EDD", false, false};
+    restartAcceptBtn = {sf::FloatRect(730, 305, 95, 44), L"\u540C\u610F", false, false};
+    restartRejectBtn = {sf::FloatRect(835, 305, 95, 44), L"\u62D2\u7EDD", false, false};
     surrenderRedBtn = {sf::FloatRect(0, 0, 180, 50), L"\u7EA2\u65B9\u8BA4\u8F93", false, false};
     surrenderBlackBtn = {sf::FloatRect(0, 0, 180, 50), L"\u9ED1\u65B9\u8BA4\u8F93", false, false};
-    surrenderAcceptBtn = {sf::FloatRect(730, 240, 95, 44), L"\u540C\u610F", false, false};
-    surrenderRejectBtn = {sf::FloatRect(835, 240, 95, 44), L"\u62D2\u7EDD", false, false};
-    drawAcceptBtn = {sf::FloatRect(730, 240, 95, 44), L"\u540C\u610F", false, false};
-    drawRejectBtn = {sf::FloatRect(835, 240, 95, 44), L"\u62D2\u7EDD", false, false};
+    surrenderAcceptBtn = {sf::FloatRect(730, 255, 95, 44), L"\u540C\u610F", false, false};
+    surrenderRejectBtn = {sf::FloatRect(835, 255, 95, 44), L"\u62D2\u7EDD", false, false};
+    drawAcceptBtn = {sf::FloatRect(730, 255, 95, 44), L"\u540C\u610F", false, false};
+    drawRejectBtn = {sf::FloatRect(835, 255, 95, 44), L"\u62D2\u7EDD", false, false};
+    closeBtn = {sf::FloatRect(1102, 23, 28, 18), L"\u2716", false, false};
 }
 
 void UIManager::DrawText(const std::wstring& text, float x, float y, unsigned sz, sf::Color c, bool center) {
@@ -148,12 +149,12 @@ void UIManager::DrawPieces(const DiagonalChessBoard& board, int selR, int selC,
 void UIManager::DrawUI(int currentTurn, bool gameOver, bool isDrawGame, bool surrendered, Side winner,
                         bool inCheck, bool aiThinking) {
     if (!fontLoaded) return;
-    sf::RectangleShape tb(sf::Vector2f(420, 50)); tb.setPosition(715, 20);
+    sf::RectangleShape tb(sf::Vector2f(420, 55)); tb.setPosition(715, 20);
     tb.setFillColor(sf::Color(65, 50, 35)); tb.setOutlineColor(sf::Color(90, 75, 55)); tb.setOutlineThickness(1);
     window->draw(tb);
-    DrawTextWithShadow(L"\u5BF9\u89D2\u8C61\u68CB", 925, 45, 26, sf::Color(220, 200, 170), true);
+    DrawTextWithShadow(L"\u5BF9\u89D2\u8C61\u68CB", 925, 50, 26, sf::Color(220, 200, 170), true);
 
-    sf::RectangleShape turnBg(sf::Vector2f(420, 70)); turnBg.setPosition(715, 80);
+    sf::RectangleShape turnBg(sf::Vector2f(420, 70)); turnBg.setPosition(715, 85);
     turnBg.setFillColor(sf::Color(60, 48, 34)); turnBg.setOutlineColor(sf::Color(85, 70, 50)); turnBg.setOutlineThickness(1);
     window->draw(turnBg);
 
@@ -168,28 +169,38 @@ void UIManager::DrawUI(int currentTurn, bool gameOver, bool isDrawGame, bool sur
         turnColor = (currentTurn == 0) ? sf::Color(255, 120, 120) : sf::Color(220, 220, 220);
         indColor = (currentTurn == 0) ? sf::Color(220, 60, 60) : sf::Color(80, 80, 80);
     }
-    sf::CircleShape ind(12); ind.setOrigin(12, 12); ind.setPosition(745, 115);
+    sf::CircleShape ind(12); ind.setOrigin(12, 12); ind.setPosition(745, 120);
     ind.setFillColor(indColor); ind.setOutlineColor(sf::Color(255, 255, 255, 80)); ind.setOutlineThickness(2);
     window->draw(ind);
-    DrawTextWithShadow(turnText, 935, 115, 30, turnColor, true);
+    DrawTextWithShadow(turnText, 935, 120, 30, turnColor, true);
 
     if (!gameOver && inCheck) {
-        sf::RectangleShape cb(sf::Vector2f(140, 40)); cb.setPosition(855, 160);
+        sf::RectangleShape cb(sf::Vector2f(140, 40)); cb.setPosition(855, 170);
         cb.setFillColor(sf::Color(180, 40, 40, 220)); cb.setOutlineColor(sf::Color(255, 120, 120)); cb.setOutlineThickness(2);
         window->draw(cb);
-        DrawTextWithShadow(L"\u5C06\u519B\uFF01", 925, 180, 24, sf::Color(255, 255, 150), true);
+        DrawTextWithShadow(L"\u5C06\u519B\uFF01", 925, 190, 24, sf::Color(255, 255, 150), true);
     }
-    if (aiThinking) DrawText(L"AI\u601D\u8003\u4E2D...", 925, 210, 18, sf::Color(200, 180, 150), true);
+    if (aiThinking) DrawText(L"AI\u601D\u8003\u4E2D...", 925, 225, 18, sf::Color(200, 180, 150), true);
+
+    // 关闭按钮（返回主菜单）
+    sf::RectangleShape closeBg(sf::Vector2f(closeBtn.bounds.width, closeBtn.bounds.height));
+    closeBg.setPosition(closeBtn.bounds.left, closeBtn.bounds.top);
+    closeBg.setFillColor(closeBtn.hovered ? sf::Color(220, 60, 60) : sf::Color(180, 50, 50));
+    closeBg.setOutlineColor(sf::Color(240, 90, 90));
+    closeBg.setOutlineThickness(1.5f);
+    window->draw(closeBg);
+    DrawTextWithShadow(L"\u2716", closeBtn.bounds.left + closeBtn.bounds.width / 2.f,
+                       closeBtn.bounds.top + closeBtn.bounds.height / 2.f, 12, sf::Color::White, true);
 }
 
 void UIManager::DrawNotification() {
     if (!notificationText.empty() && notificationTimer > 0.f) {
         float a = std::min(notificationTimer / 3.f, 1.f) * 255.f;
-        sf::RectangleShape bg(sf::Vector2f(300, 30)); bg.setPosition(820, 170);
+        sf::RectangleShape bg(sf::Vector2f(300, 30)); bg.setPosition(820, 180);
         bg.setFillColor(sf::Color(180, 60, 30, (sf::Uint8)(a * 0.6f)));
         bg.setOutlineColor(sf::Color(255, 100, 50, (sf::Uint8)(a * 0.8f))); bg.setOutlineThickness(2);
         window->draw(bg);
-        DrawTextWithShadow(notificationText, 970, 185, 16, sf::Color(255, 100, 60, (sf::Uint8)a), true);
+        DrawTextWithShadow(notificationText, 970, 195, 16, sf::Color(255, 100, 60, (sf::Uint8)a), true);
     }
 }
 
@@ -258,42 +269,42 @@ void UIManager::DrawButtons() {
 
 void UIManager::DrawRequestPopups(bool undoRecv, bool restartRecv, bool surrRecv, bool drawRecv) {
     if (undoRecv) {
-        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 240);
+        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 255);
         bg.setFillColor(sf::Color(180, 130, 30, 220)); bg.setOutlineColor(sf::Color(255, 180, 50)); bg.setOutlineThickness(2);
         window->draw(bg);
-        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u6094\u68CB", 1040, 260, 16, sf::Color(255, 255, 200), true);
-        undoAcceptBtn.bounds = sf::FloatRect(940, 275, 95, 44);
-        undoRejectBtn.bounds = sf::FloatRect(1045, 275, 95, 44);
+        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u6094\u68CB", 1040, 275, 16, sf::Color(255, 255, 200), true);
+        undoAcceptBtn.bounds = sf::FloatRect(940, 290, 95, 44);
+        undoRejectBtn.bounds = sf::FloatRect(1045, 290, 95, 44);
         DrawSmallButton(undoAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         DrawSmallButton(undoRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
     if (restartRecv) {
-        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 290);
+        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 305);
         bg.setFillColor(sf::Color(180, 130, 30, 220)); bg.setOutlineColor(sf::Color(255, 180, 50)); bg.setOutlineThickness(2);
         window->draw(bg);
-        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u91CD\u5F00", 1040, 310, 16, sf::Color(255, 255, 200), true);
-        restartAcceptBtn.bounds = sf::FloatRect(940, 325, 95, 44);
-        restartRejectBtn.bounds = sf::FloatRect(1045, 325, 95, 44);
+        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u91CD\u5F00", 1040, 325, 16, sf::Color(255, 255, 200), true);
+        restartAcceptBtn.bounds = sf::FloatRect(940, 340, 95, 44);
+        restartRejectBtn.bounds = sf::FloatRect(1045, 340, 95, 44);
         DrawSmallButton(restartAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         DrawSmallButton(restartRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
     if (surrRecv) {
-        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 340);
+        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 355);
         bg.setFillColor(sf::Color(180, 40, 40, 220)); bg.setOutlineColor(sf::Color(255, 80, 80)); bg.setOutlineThickness(2);
         window->draw(bg);
-        DrawText(L"\u5BF9\u65B9\u8BA4\u8F93\u4E86", 1040, 360, 16, sf::Color(255, 220, 200), true);
-        surrenderAcceptBtn.bounds = sf::FloatRect(940, 375, 95, 44);
-        surrenderRejectBtn.bounds = sf::FloatRect(1045, 375, 95, 44);
+        DrawText(L"\u5BF9\u65B9\u8BA4\u8F93\u4E86", 1040, 375, 16, sf::Color(255, 220, 200), true);
+        surrenderAcceptBtn.bounds = sf::FloatRect(940, 390, 95, 44);
+        surrenderRejectBtn.bounds = sf::FloatRect(1045, 390, 95, 44);
         DrawSmallButton(surrenderAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         DrawSmallButton(surrenderRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
     if (drawRecv) {
-        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 390);
+        sf::RectangleShape bg(sf::Vector2f(200, 70)); bg.setPosition(940, 405);
         bg.setFillColor(sf::Color(180, 180, 40, 220)); bg.setOutlineColor(sf::Color(255, 255, 80)); bg.setOutlineThickness(2);
         window->draw(bg);
-        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u548C\u68CB", 1040, 410, 16, sf::Color(255, 255, 200), true);
-        drawAcceptBtn.bounds = sf::FloatRect(940, 425, 95, 44);
-        drawRejectBtn.bounds = sf::FloatRect(1045, 425, 95, 44);
+        DrawText(L"\u5BF9\u65B9\u8BF7\u6C42\u548C\u68CB", 1040, 425, 16, sf::Color(255, 255, 200), true);
+        drawAcceptBtn.bounds = sf::FloatRect(940, 440, 95, 44);
+        drawRejectBtn.bounds = sf::FloatRect(1045, 440, 95, 44);
         DrawSmallButton(drawAcceptBtn, sf::Color(60, 140, 60), sf::Color(80, 180, 80));
         DrawSmallButton(drawRejectBtn, sf::Color(160, 50, 50), sf::Color(200, 80, 80));
     }
@@ -373,29 +384,29 @@ void UIManager::DrawNetUI(bool netMode, NetState ns, const std::wstring& localIP
     if (!fontLoaded || !netMode) return;
     if (ns == NetState::OFFLINE) {
         if (showIP) {
-            sf::RectangleShape ib(sf::Vector2f(200, 35)); ib.setPosition(730, 440);
+            sf::RectangleShape ib(sf::Vector2f(200, 35)); ib.setPosition(730, 455);
             ib.setFillColor(sf::Color(40, 35, 28)); ib.setOutlineColor(sf::Color(120, 100, 80)); ib.setOutlineThickness(2);
             window->draw(ib);
             std::wstring d = inputIP.empty() ? L"\u8F93\u5165IP\u5730\u5740..." : inputIP;
-            DrawText(d, 740, 447, 15, inputIP.empty() ? sf::Color(120, 110, 100) : sf::Color(240, 230, 220));
+            DrawText(d, 740, 462, 15, inputIP.empty() ? sf::Color(120, 110, 100) : sf::Color(240, 230, 220));
             DrawNetButton(connectBtn);
         } else { DrawNetButton(hostBtn); DrawNetButton(joinBtn); }
     } else if (ns == NetState::HOST_WAITING) {
-        sf::RectangleShape sb(sf::Vector2f(200, 90)); sb.setPosition(730, 500);
+        sf::RectangleShape sb(sf::Vector2f(200, 90)); sb.setPosition(730, 515);
         sb.setFillColor(sf::Color(50, 45, 35)); sb.setOutlineColor(sf::Color(80, 70, 55)); sb.setOutlineThickness(1);
         window->draw(sb);
-        DrawText(L"\u7B49\u5F85\u8FDE\u63A5...", 830, 520, 16, sf::Color(200, 200, 150), true);
-        DrawText(L"\u672C\u673AIP:", 830, 546, 14, sf::Color(180, 180, 180), true);
-        DrawText(localIP, 830, 568, 16, sf::Color(100, 255, 100), true);
-        disconnectBtn.bounds.top = 600; DrawNetRedButton(disconnectBtn);
+        DrawText(L"\u7B49\u5F85\u8FDE\u63A5...", 830, 535, 16, sf::Color(200, 200, 150), true);
+        DrawText(L"\u672C\u673AIP:", 830, 561, 14, sf::Color(180, 180, 180), true);
+        DrawText(localIP, 830, 583, 16, sf::Color(100, 255, 100), true);
+        disconnectBtn.bounds.top = 615; DrawNetRedButton(disconnectBtn);
     } else if (ns == NetState::CONNECTED) {
-        sf::RectangleShape sb(sf::Vector2f(200, 80)); sb.setPosition(730, 500);
+        sf::RectangleShape sb(sf::Vector2f(200, 80)); sb.setPosition(730, 515);
         sb.setFillColor(sf::Color(40, 60, 40)); sb.setOutlineColor(sf::Color(80, 120, 80)); sb.setOutlineThickness(1);
         window->draw(sb);
-        DrawText(L"\u5DF2\u8FDE\u63A5", 830, 520, 18, sf::Color(100, 255, 100), true);
+        DrawText(L"\u5DF2\u8FDE\u63A5", 830, 535, 18, sf::Color(100, 255, 100), true);
         std::wstring st = (netSide == 0) ? L"\u4F60\u662F\u7EA2\u65B9" : L"\u4F60\u662F\u9ED1\u65B9";
-        DrawText(st, 830, 555, 16, (netSide == 0) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200), true);
-        disconnectBtn.bounds.top = 590; DrawNetRedButton(disconnectBtn);
+        DrawText(st, 830, 570, 16, (netSide == 0) ? sf::Color(255, 120, 120) : sf::Color(200, 200, 200), true);
+        disconnectBtn.bounds.top = 605; DrawNetRedButton(disconnectBtn);
     }
 }
 
@@ -484,6 +495,7 @@ void UIManager::UpdateHover(float mx, float my) {
     drawAcceptBtn.hovered = drawAcceptBtn.bounds.contains(mx, my);
     drawRejectBtn.hovered = drawRejectBtn.bounds.contains(mx, my);
     gameOverRestartBtn.hovered = gameOverRestartBtn.bounds.contains(mx, my);
+    closeBtn.hovered = closeBtn.bounds.contains(mx, my);
 }
 
 void UIManager::UpdateNotification(float dt) {

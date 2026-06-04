@@ -18,21 +18,25 @@ GomokuGame::GomokuGame()
     }
 
     // 初始化按钮位置
-    restartBtn.bounds    = sf::FloatRect(745, 160, 160, 44);
+    restartBtn.bounds    = sf::FloatRect(745, 185, 160, 44);
     restartBtn.label     = L"\u91CD\u65B0\u5F00\u59CB";
     restartBtn.hovered   = false;
 
-    undoBtn.bounds       = sf::FloatRect(745, 220, 160, 44);
+    undoBtn.bounds       = sf::FloatRect(745, 245, 160, 44);
     undoBtn.label        = L"\u6094\u68CB";
     undoBtn.hovered      = false;
 
-    surrenderBtn.bounds  = sf::FloatRect(745, 280, 160, 44);
+    surrenderBtn.bounds  = sf::FloatRect(745, 305, 160, 44);
     surrenderBtn.label   = L"\u8BA4\u8F93";
     surrenderBtn.hovered = false;
 
     gameOverRestartBtn.bounds  = sf::FloatRect(0, 0, 200, 50);
     gameOverRestartBtn.label   = L"\u91CD\u65B0\u5F00\u59CB";
     gameOverRestartBtn.hovered = false;
+
+    closeBtn.bounds    = sf::FloatRect(1102, 23, 28, 18);
+    closeBtn.label     = L"\u2716";
+    closeBtn.hovered   = false;
 }
 
 GomokuGame::~GomokuGame() {}
@@ -112,6 +116,7 @@ void GomokuGame::ProcessEvents() {
             float my = (float)e.mouseMove.y;
 
             // 更新按钮悬停
+            closeBtn.hovered = closeBtn.bounds.contains(mx, my);
             restartBtn.hovered = restartBtn.bounds.contains(mx, my);
             undoBtn.hovered = undoBtn.bounds.contains(mx, my);
             surrenderBtn.hovered = surrenderBtn.bounds.contains(mx, my);
@@ -143,6 +148,10 @@ void GomokuGame::HandleBoardClick(int r, int c) {
 }
 
 void GomokuGame::HandleButtonClick(float mx, float my) {
+    if (closeBtn.bounds.contains(mx, my)) {
+        window.close();
+        return;
+    }
     if (restartBtn.bounds.contains(mx, my)) {
         RestartGame();
     } else if (undoBtn.bounds.contains(mx, my)) {
@@ -356,17 +365,38 @@ void GomokuGame::DrawUI() {
     if (!fontLoaded) return;
 
     // 标题
-    sf::RectangleShape tb(sf::Vector2f(420, 50));
+    sf::RectangleShape tb(sf::Vector2f(420, 55));
     tb.setPosition(715, 20);
     tb.setFillColor(sf::Color(65, 50, 35));
     tb.setOutlineColor(sf::Color(90, 75, 55));
     tb.setOutlineThickness(1);
     window.draw(tb);
-    DrawText(L"\u4E94\u5B50\u68CB", 925, 45, 26, sf::Color(220, 200, 170), true);
+    DrawText(L"\u4E94\u5B50\u68CB", 925, 50, 26, sf::Color(220, 200, 170), true);
+
+    // 关闭按钮（返回主菜单）
+    auto drawCloseBtn = [this]() {
+        sf::RectangleShape cb(sf::Vector2f(closeBtn.bounds.width, closeBtn.bounds.height));
+        cb.setPosition(closeBtn.bounds.left, closeBtn.bounds.top);
+        cb.setFillColor(closeBtn.hovered ? sf::Color(220, 60, 60) : sf::Color(180, 50, 50));
+        cb.setOutlineColor(sf::Color(240, 90, 90));
+        cb.setOutlineThickness(1.5f);
+        window.draw(cb);
+        sf::Text t;
+        t.setFont(font);
+        t.setString(L"\u2716");
+        t.setCharacterSize(12);
+        t.setFillColor(sf::Color::White);
+        auto b = t.getLocalBounds();
+        t.setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
+        t.setPosition(closeBtn.bounds.left + closeBtn.bounds.width / 2.f,
+                      closeBtn.bounds.top + closeBtn.bounds.height / 2.f);
+        window.draw(t);
+    };
+    drawCloseBtn();
 
     // 回合信息
     sf::RectangleShape turnBg(sf::Vector2f(420, 90));
-    turnBg.setPosition(715, 80);
+    turnBg.setPosition(715, 85);
     turnBg.setFillColor(sf::Color(60, 48, 34));
     turnBg.setOutlineColor(sf::Color(85, 70, 50));
     turnBg.setOutlineThickness(1);
@@ -397,13 +427,13 @@ void GomokuGame::DrawUI() {
     // 棋子颜色指示器
     sf::CircleShape ind(10);
     ind.setOrigin(10, 10);
-    ind.setPosition(745, 125);
+    ind.setPosition(745, 130);
     ind.setFillColor(stoneColor);
     ind.setOutlineColor(sf::Color::White);
     ind.setOutlineThickness(1);
     window.draw(ind);
 
-    DrawText(turnText, 935, 125, 28, turnColor, true);
+    DrawText(turnText, 935, 130, 28, turnColor, true);
 
     // 按钮
     auto drawBtn = [this](const RectButton& btn) {
@@ -442,9 +472,9 @@ void GomokuGame::DrawUI() {
     drawBtn(surrenderBtn);
 
     // 操作提示
-    DrawText(L"\u5DE6\u952E\u70B9\u51FB\u843D\u5B50", 925, 360, 14,
+    DrawText(L"\u5DE6\u952E\u70B9\u51FB\u843D\u5B50", 925, 380, 14,
              sf::Color(160, 140, 120), true);
-    DrawText(L"\u9ED1\u5148\u767D\u540E \u4EA4\u66FF\u843D\u5B50", 925, 385, 14,
+    DrawText(L"\u9ED1\u5148\u767D\u540E \u4EA4\u66FF\u843D\u5B50", 925, 405, 14,
              sf::Color(140, 120, 100), true);
 
     // 底部版本

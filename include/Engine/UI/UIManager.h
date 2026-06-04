@@ -62,6 +62,7 @@ public:
     UIButton surrenderAcceptBtn, surrenderRejectBtn;
     UIButton surrenderRedBtn, surrenderBlackBtn;
     UIButton drawAcceptBtn, drawRejectBtn;
+    UIButton closeBtn;
 
 private:
     sf::RenderWindow* window = nullptr;
