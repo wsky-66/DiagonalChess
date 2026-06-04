@@ -16,6 +16,7 @@ add_executable(${PROJECT_NAME} WIN32
     src/Engine/AI/DiagonalChessAI.cpp
     src/Engine/Network/NetworkManager.cpp
     src/Engine/UI/UIManager.cpp
+    src/Engine/UI/MainMenuScene.cpp
     src/Engine/Audio/AudioManager.cpp
     src/Engine/Effects/ParticleSystem.cpp
     src/Engine/Games/DiagonalChess/DiagonalChessGame.cpp

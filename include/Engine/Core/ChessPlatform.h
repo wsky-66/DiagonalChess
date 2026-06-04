@@ -2,6 +2,7 @@
 #include "Engine/Core/GameManager.h"
 #include "Engine/Core/Scene.h"
 #include <memory>
+#include <string>
 
 class ChessPlatform {
 public:
@@ -12,6 +13,7 @@ public:
     GameManager& GetGameManager() { return gameManager; }
 
 private:
+    void LaunchGame(const std::string& name);
+
     GameManager gameManager;
-    std::unique_ptr<Scene> currentScene;
 };
