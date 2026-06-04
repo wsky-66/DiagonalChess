@@ -401,7 +401,7 @@ void DiagonalChessGame::CheckGameEnd() {
         gameOver = true; isDrawGame = true; gameOverTimer = 0.f;
         particles.CreateDrawParticles(); audio.PlayDrawSound(); return;
     }
-    if (rule.HasInsufficientMaterial(board)) {
+    if (rule.SideHasNoAttack(board, currentTurn)) {
         gameOver = true; isDrawGame = false; gameOverTimer = 0.f;
         winner = (currentTurn == 0) ? Side::BLACK : Side::RED;
         particles.CreateWinParticles(winner);
@@ -409,13 +409,10 @@ void DiagonalChessGame::CheckGameEnd() {
         return;
     }
     if (!rule.HasLegalMovesRaw(board, currentTurn)) {
-        gameOver = true;
-        if (rule.IsInCheckRaw(board, currentTurn)) {
-            winner = (currentTurn == 0) ? Side::BLACK : Side::RED; isDrawGame = false;
-        } else { isDrawGame = true; }
-        gameOverTimer = 0.f;
-        if (isDrawGame) { particles.CreateDrawParticles(); audio.PlayDrawSound(); }
-        else { particles.CreateWinParticles(winner); if (winner == Side::RED) audio.PlayWinSound(); else audio.PlayLoseSound(); }
+        gameOver = true; isDrawGame = false; gameOverTimer = 0.f;
+        winner = (currentTurn == 0) ? Side::BLACK : Side::RED;
+        particles.CreateWinParticles(winner);
+        if (winner == Side::RED) audio.PlayWinSound(); else audio.PlayLoseSound();
     }
 }
 

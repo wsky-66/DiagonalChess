@@ -20,6 +20,7 @@ public:
     bool WouldBeInCheck(const DiagonalChessBoard& b, int fr, int fc, int tr, int tc, int side) const;
     bool IsCheckmate(const DiagonalChessBoard& b, int side) const;
     bool HasInsufficientMaterial(const DiagonalChessBoard& b) const;
+    bool SideHasNoAttack(const DiagonalChessBoard& b, int side) const;
     bool IsInPalace(int r, int c, int side) const;
 
 private:

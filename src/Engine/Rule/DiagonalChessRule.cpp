@@ -169,8 +169,8 @@ bool DiagonalChessRule::WouldBeInCheck(const DiagonalChessBoard& b, int fr, int 
     DiagonalChessBoard temp;
     b.CopyTo(temp);
     temp.At(tr, tc) = temp.At(fr, fc);
-    temp.At(fr, fc) = DiagonalChessPiece(DChessPieceType::NONE, 0);
-    temp.At(fr, fc).SetAlive(false);
+    temp.OccupiedCell(tr, tc);
+    temp.ClearCell(fr, fc);
     return IsInCheckRaw(temp, side);
 }
 
@@ -187,41 +187,40 @@ bool DiagonalChessRule::IsCheckmate(const DiagonalChessBoard& b, int side) const
 }
 
 bool DiagonalChessRule::HasInsufficientMaterial(const DiagonalChessBoard& b) const {
-    int redPieces = 0, blackPieces = 0;
     bool redHasAttack = false, blackHasAttack = false;
     for (int r = 0; r < 9; r++) {
         for (int c = 0; c < 9; c++) {
             if (!b.IsOccupied(r, c)) continue;
-            if (b.At(r, c).GetSide() == 0) {
-                redPieces++;
-                auto t = b.At(r, c).GetDType();
-                if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) redHasAttack = true;
-            } else {
-                blackPieces++;
-                auto t = b.At(r, c).GetDType();
-                if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) blackHasAttack = true;
-            }
+            auto t = b.At(r, c).GetDType();
+            if (t == DChessPieceType::GENERAL || t == DChessPieceType::ADVISOR) continue;
+            if (b.At(r, c).GetSide() == 0) redHasAttack = true;
+            else blackHasAttack = true;
         }
     }
-    if (redPieces <= 1 && blackPieces <= 1) return true;
-    if (!redHasAttack && !blackHasAttack) return true;
-    return false;
+    return !redHasAttack || !blackHasAttack;
+}
+
+bool DiagonalChessRule::SideHasNoAttack(const DiagonalChessBoard& b, int side) const {
+    for (int r = 0; r < 9; r++) {
+        for (int c = 0; c < 9; c++) {
+            if (!b.IsOccupied(r, c) || b.At(r, c).GetSide() != side) continue;
+            auto t = b.At(r, c).GetDType();
+            if (t != DChessPieceType::GENERAL && t != DChessPieceType::ADVISOR) return false;
+        }
+    }
+    return true;
 }
 
 bool DiagonalChessRule::IsGameOverRaw(const DiagonalChessBoard& b, Side side, bool& isDraw, Side& winner) const {
     int s = static_cast<int>(side);
-    if (HasInsufficientMaterial(b)) {
+    if (SideHasNoAttack(b, s)) {
         isDraw = false;
         winner = (side == Side::RED) ? Side::BLACK : Side::RED;
         return true;
     }
     if (!HasLegalMovesRaw(b, s)) {
-        if (IsInCheckRaw(b, s)) {
-            winner = (side == Side::RED) ? Side::BLACK : Side::RED;
-            isDraw = false;
-        } else {
-            isDraw = true;
-        }
+        isDraw = false;
+        winner = (side == Side::RED) ? Side::BLACK : Side::RED;
         return true;
     }
     return false;
