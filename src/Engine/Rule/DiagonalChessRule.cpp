@@ -210,7 +210,11 @@ bool DiagonalChessRule::HasInsufficientMaterial(const DiagonalChessBoard& b) con
 
 bool DiagonalChessRule::IsGameOverRaw(const DiagonalChessBoard& b, Side side, bool& isDraw, Side& winner) const {
     int s = static_cast<int>(side);
-    if (HasInsufficientMaterial(b)) { isDraw = true; return true; }
+    if (HasInsufficientMaterial(b)) {
+        isDraw = false;
+        winner = (side == Side::RED) ? Side::BLACK : Side::RED;
+        return true;
+    }
     if (!HasLegalMovesRaw(b, s)) {
         if (IsInCheckRaw(b, s)) {
             winner = (side == Side::RED) ? Side::BLACK : Side::RED;

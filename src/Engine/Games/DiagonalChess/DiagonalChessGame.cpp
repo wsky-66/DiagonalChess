@@ -402,8 +402,11 @@ void DiagonalChessGame::CheckGameEnd() {
         particles.CreateDrawParticles(); audio.PlayDrawSound(); return;
     }
     if (rule.HasInsufficientMaterial(board)) {
-        gameOver = true; isDrawGame = true; gameOverTimer = 0.f;
-        particles.CreateDrawParticles(); audio.PlayDrawSound(); return;
+        gameOver = true; isDrawGame = false; gameOverTimer = 0.f;
+        winner = (currentTurn == 0) ? Side::BLACK : Side::RED;
+        particles.CreateWinParticles(winner);
+        if (winner == Side::RED) audio.PlayWinSound(); else audio.PlayLoseSound();
+        return;
     }
     if (!rule.HasLegalMovesRaw(board, currentTurn)) {
         gameOver = true;
