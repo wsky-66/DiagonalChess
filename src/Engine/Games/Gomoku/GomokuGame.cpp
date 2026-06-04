@@ -1,33 +1,40 @@
+// ===================================================================
+// GomokuGame.cpp — 五子棋游戏的实现
+// 包含：事件处理、落子、悔棋、认输、重开、胜负判定、渲染
+// 规则简洁：黑先白后交替落子，任意方向五连即胜，棋盘满为平局
+// ===================================================================
+
 #include "Engine/Games/Gomoku/GomokuGame.h"
 #include <sstream>
 
+// ==================== 构造函数 ====================
 GomokuGame::GomokuGame()
-    : window(sf::VideoMode(WIN_W, WIN_H), L"\u4E94\u5B50\u68CB",
+    : window(sf::VideoMode(WIN_W, WIN_H), L"\u4E94\u5B50\u68CB",  // 窗口标题"五子棋"
              sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize)
-    , currentTurn(1)
+    , currentTurn(1)                                     // 黑方先行
     , gameOver(false), winner(0), isDraw(false), surrendered(false)
     , hoverR(-1), hoverC(-1), mouseOnBoard(false)
     , gameOverTimer(0.f)
 {
     window.setFramerateLimit(60);
-
+    // 加载中文字体
     if (font.loadFromFile("C:/Windows/Fonts/simhei.ttf") ||
         font.loadFromFile("C:/Windows/Fonts/msyh.ttc") ||
         font.loadFromFile("C:/Windows/Fonts/simsun.ttc")) {
         fontLoaded = true;
     }
 
-    // 初始化按钮位置
+    // 初始化按钮位置和文字
     restartBtn.bounds    = sf::FloatRect(745, 185, 160, 44);
-    restartBtn.label     = L"\u91CD\u65B0\u5F00\u59CB";
+    restartBtn.label     = L"\u91CD\u65B0\u5F00\u59CB";    // "重新开始"
     restartBtn.hovered   = false;
 
     undoBtn.bounds       = sf::FloatRect(745, 245, 160, 44);
-    undoBtn.label        = L"\u6094\u68CB";
+    undoBtn.label        = L"\u6094\u68CB";                // "悔棋"
     undoBtn.hovered      = false;
 
     surrenderBtn.bounds  = sf::FloatRect(745, 305, 160, 44);
-    surrenderBtn.label   = L"\u8BA4\u8F93";
+    surrenderBtn.label   = L"\u8BA4\u8F93";                // "认输"
     surrenderBtn.hovered = false;
 
     gameOverRestartBtn.bounds  = sf::FloatRect(0, 0, 200, 50);
@@ -35,28 +42,30 @@ GomokuGame::GomokuGame()
     gameOverRestartBtn.hovered = false;
 
     closeBtn.bounds    = sf::FloatRect(1102, 23, 28, 18);
-    closeBtn.label     = L"\u2716";
+    closeBtn.label     = L"\u2716";                        // ✖ 符号
     closeBtn.hovered   = false;
 }
 
 GomokuGame::~GomokuGame() {}
 
+// ==================== 每帧更新 ====================
 void GomokuGame::Update(float dt) {
-    ProcessEvents();
+    ProcessEvents();                                     // 处理窗口事件
     if (gameOver)
-        gameOverTimer += dt;
+        gameOverTimer += dt;                             // 游戏结束后累积计时（渐显动画用）
 }
 
+// ==================== 渲染 ====================
 void GomokuGame::Render() {
-    window.clear(sf::Color(40, 32, 22));
+    window.clear(sf::Color(40, 32, 22));                 // 深色背景
 
-    // 左侧面板（棋盘区域）
+    // 左侧面板（棋盘区域，700px 宽）
     sf::RectangleShape lp(sf::Vector2f(700.f, WIN_H));
     lp.setPosition(0, 0);
     lp.setFillColor(sf::Color(55, 42, 28));
     window.draw(lp);
 
-    // 右侧面板
+    // 右侧面板（按钮区，450px 宽）
     sf::RectangleShape rp(sf::Vector2f(450.f, WIN_H));
     rp.setPosition(700, 0);
     rp.setFillColor(sf::Color(45, 35, 24));
@@ -68,41 +77,42 @@ void GomokuGame::Render() {
     dv.setFillColor(sf::Color(80, 65, 45));
     window.draw(dv);
 
-    DrawBoard();
-    DrawStones();
-    DrawUI();
+    DrawBoard();                                         // 棋盘背景+网格线
+    DrawStones();                                        // 棋子（含悬停预览）
+    DrawUI();                                            // 右侧 UI
 
     if (gameOver)
-        DrawGameOver();
+        DrawGameOver();                                  // 游戏结束遮罩
 
     window.display();
 }
 
 // ==================== 事件处理 ====================
-
 void GomokuGame::ProcessEvents() {
     sf::Event e;
     while (window.pollEvent(e)) {
+        // 关闭窗口
         if (e.type == sf::Event::Closed) {
             window.close();
             return;
         }
 
+        // 鼠标左键按下
         if (e.type == sf::Event::MouseButtonPressed &&
             e.mouseButton.button == sf::Mouse::Left) {
             float mx = (float)e.mouseButton.x;
             float my = (float)e.mouseButton.y;
 
-            // 游戏结束按钮
+            // 游戏结束后的"重新开始"按钮
             if (gameOver && gameOverTimer > 0.5f &&
                 gameOverRestartBtn.bounds.contains(mx, my)) {
                 RestartGame();
             }
-            // 右侧按钮
+            // 右侧面板按钮
             else if (mx >= 700) {
                 HandleButtonClick(mx, my);
             }
-            // 棋盘区域
+            // 棋盘区域点击 → 尝试落子
             else {
                 auto g = board.ScreenToGrid(mx, my);
                 if (g.x >= 0 && g.x < GomokuBoard::SIZE &&
@@ -111,11 +121,12 @@ void GomokuGame::ProcessEvents() {
             }
         }
 
+        // 鼠标移动
         if (e.type == sf::Event::MouseMoved) {
             float mx = (float)e.mouseMove.x;
             float my = (float)e.mouseMove.y;
 
-            // 更新按钮悬停
+            // 更新按钮悬停状态
             closeBtn.hovered = closeBtn.bounds.contains(mx, my);
             restartBtn.hovered = restartBtn.bounds.contains(mx, my);
             undoBtn.hovered = undoBtn.bounds.contains(mx, my);
@@ -123,7 +134,7 @@ void GomokuGame::ProcessEvents() {
             if (gameOver)
                 gameOverRestartBtn.hovered = gameOverRestartBtn.bounds.contains(mx, my);
 
-            // 更新棋盘悬停
+            // 更新棋盘悬停状态（用于显示半透明预览棋子）
             if (mx < 700) {
                 auto g = board.ScreenToGrid(mx, my);
                 if (g.x >= 0 && g.x < GomokuBoard::SIZE &&
@@ -141,15 +152,17 @@ void GomokuGame::ProcessEvents() {
     }
 }
 
+// 棋盘点击 → 如果位置合法且为空则落子
 void GomokuGame::HandleBoardClick(int r, int c) {
     if (gameOver) return;
-    if (!board.IsEmpty(r, c)) return; // 已有棋子，不可覆盖
+    if (!board.IsEmpty(r, c)) return;                   // 已有棋子，不可覆盖
     PlaceStone(r, c);
 }
 
+// 按钮点击处理
 void GomokuGame::HandleButtonClick(float mx, float my) {
     if (closeBtn.bounds.contains(mx, my)) {
-        window.close();
+        window.close();                                  // 返回主菜单
         return;
     }
     if (restartBtn.bounds.contains(mx, my)) {
@@ -162,23 +175,23 @@ void GomokuGame::HandleButtonClick(float mx, float my) {
 }
 
 // ==================== 落子 ====================
-
 void GomokuGame::PlaceStone(int r, int c) {
-    board.PlaceStone(r, c, currentTurn);
+    board.PlaceStone(r, c, currentTurn);                 // 在棋盘上放子
 
     // 记录悔棋信息
     moveHistory.push({r, c, currentTurn});
 
-    // 检测游戏结束
+    // 检测游戏是否结束（五连或棋盘满）
     CheckGameEnd(r, c);
 
-    // 切换回合
+    // 切换回合：1→2, 2→1
     if (!gameOver)
         currentTurn = (currentTurn == 1) ? 2 : 1;
 }
 
+// 检测游戏结束条件
 void GomokuGame::CheckGameEnd(int r, int c) {
-    // 检测落子方是否五连获胜
+    // 检测落子方是否形成五连
     if (rule.CheckWin(board, r, c, currentTurn)) {
         gameOver = true;
         winner = currentTurn;
@@ -187,27 +200,26 @@ void GomokuGame::CheckGameEnd(int r, int c) {
         return;
     }
 
-    // 检测平局（棋盘已满）
+    // 检测平局（棋盘已满且无五连）
     if (rule.IsBoardFull(board)) {
         gameOver = true;
         isDraw = true;
-        winner = 0;
+        winner = 0;                                      // 平局无胜者
         gameOverTimer = 0.f;
     }
 }
 
 // ==================== 悔棋 ====================
-
 void GomokuGame::UndoMove() {
     if (moveHistory.empty() || gameOver) return;
 
     auto rec = moveHistory.top();
     moveHistory.pop();
-    board.RemoveStone(rec.r, rec.c);
+    board.RemoveStone(rec.r, rec.c);                     // 移除棋子
 
-    // 如果游戏已结束，撤回可以恢复游戏
+    // 恢复回合
     if (moveHistory.empty()) {
-        currentTurn = 1;
+        currentTurn = 1;                                 // 历史为空 → 黑方先行
     } else {
         currentTurn = moveHistory.top().side;
     }
@@ -217,21 +229,19 @@ void GomokuGame::UndoMove() {
 }
 
 // ==================== 认输 ====================
-
 void GomokuGame::DoSurrender() {
     if (gameOver) return;
     gameOver = true;
     surrendered = true;
     isDraw = false;
-    winner = (currentTurn == 1) ? 2 : 1; // 当前方认输，对方获胜
+    winner = (currentTurn == 1) ? 2 : 1;                 // 当前方认输，对方获胜
     gameOverTimer = 0.f;
 }
 
 // ==================== 重新开始 ====================
-
 void GomokuGame::RestartGame() {
-    board.Reset();
-    currentTurn = 1;
+    board.Reset();                                       // 清空棋盘
+    currentTurn = 1;                                     // 黑方先行
     gameOver = false;
     isDraw = false;
     surrendered = false;
@@ -248,24 +258,23 @@ void GomokuGame::Reset() {
 }
 
 // ==================== 渲染：棋盘 ====================
-
 void GomokuGame::DrawBoard() {
     const float ox = GomokuBoard::ORIGIN_X;
     const float oy = GomokuBoard::ORIGIN_Y;
     const float cell = GomokuBoard::CELL;
     const int sz = GomokuBoard::SIZE;
-    const float boardW = (sz - 1) * cell;
-    const float boardH = (sz - 1) * cell;
+    const float boardW = (sz - 1) * cell;                // 棋盘总宽度
+    const float boardH = (sz - 1) * cell;                // 棋盘总高度
 
-    // 棋盘背景
+    // 棋盘木色背景
     sf::RectangleShape bg(sf::Vector2f(boardW + 40, boardH + 40));
     bg.setPosition(ox - 20, oy - 20);
-    bg.setFillColor(sf::Color(210, 180, 140));
+    bg.setFillColor(sf::Color(210, 180, 140));            // 木色
     bg.setOutlineColor(sf::Color(80, 50, 20));
     bg.setOutlineThickness(3);
     window.draw(bg);
 
-    // 网格线
+    // 绘制网格线（横线和竖线各15条）
     sf::Color lc(60, 40, 20);
     for (int i = 0; i < sz; i++) {
         // 横线
@@ -274,6 +283,7 @@ void GomokuGame::DrawBoard() {
             sf::Vertex(sf::Vector2f(ox + boardW, oy + i * cell), lc)
         };
         window.draw(hline, 2, sf::Lines);
+
         // 竖线
         sf::Vertex vline[] = {
             sf::Vertex(sf::Vector2f(ox + i * cell, oy), lc),
@@ -282,7 +292,7 @@ void GomokuGame::DrawBoard() {
         window.draw(vline, 2, sf::Lines);
     }
 
-    // 星位标记（天元和四星）
+    // 绘制星位（天元 + 四角星，传统五子棋盘标记）
     auto drawStar = [&](int r, int c) {
         sf::CircleShape dot(4);
         dot.setOrigin(4, 4);
@@ -291,39 +301,40 @@ void GomokuGame::DrawBoard() {
         window.draw(dot);
     };
 
-    // 传统五子棋盘星位：四角星 + 天元
+    // 传统五子棋盘星位位置
     const int starPositions[5][2] = {
-        {3, 3}, {3, 11}, {11, 3}, {11, 11},  // 四角星
-        {7, 7}                                 // 天元
+        {3, 3}, {3, 11},    // 四角星（左上、右上）
+        {11, 3}, {11, 11},  // 四角星（左下、右下）
+        {7, 7}               // 天元（棋盘正中心）
     };
     for (auto& sp : starPositions)
         drawStar(sp[0], sp[1]);
 }
 
 // ==================== 渲染：棋子 ====================
-
 void GomokuGame::DrawStones() {
     const float ox = GomokuBoard::ORIGIN_X;
     const float oy = GomokuBoard::ORIGIN_Y;
     const float cell = GomokuBoard::CELL;
-    const float sr = GomokuBoard::STONE_R;
+    const float sr = GomokuBoard::STONE_R;               // 棋子半径
 
+    // 遍历所有格子，绘制已有棋子
     for (int r = 0; r < GomokuBoard::SIZE; r++) {
         for (int c = 0; c < GomokuBoard::SIZE; c++) {
             int side = board.GetCell(r, c);
-            if (side == 0) continue;
+            if (side == 0) continue;                     // 空位跳过
 
             sf::Vector2f pos(ox + c * cell, oy + r * cell);
-            sf::Color col = GetSideColor(side);
+            sf::Color col = GetSideColor(side);          // 黑=深色, 白=浅色
 
-            // 阴影
+            // 绘制阴影（增加立体感）
             sf::CircleShape shadow(sr);
             shadow.setOrigin(sr, sr);
             shadow.setPosition(pos.x + 2, pos.y + 2);
             shadow.setFillColor(sf::Color(0, 0, 0, 60));
             window.draw(shadow);
 
-            // 主棋子
+            // 绘制主棋子
             sf::CircleShape stone(sr);
             stone.setOrigin(sr, sr);
             stone.setPosition(pos);
@@ -335,7 +346,7 @@ void GomokuGame::DrawStones() {
             stone.setOutlineThickness(2);
             window.draw(stone);
 
-            // 高光
+            // 绘制高光（左上角的高亮度区域，增加光泽感）
             sf::CircleShape hl(sr - 5);
             hl.setOrigin(sr - 5, sr - 5);
             hl.setPosition(pos.x - 3, pos.y - 4);
@@ -344,7 +355,7 @@ void GomokuGame::DrawStones() {
         }
     }
 
-    // 悬停预览（合法落子位置）
+    // 绘制悬停预览（半透明的棋子，提示将要落子的位置）
     if (!gameOver && mouseOnBoard && hoverR >= 0 && hoverC >= 0 &&
         board.IsEmpty(hoverR, hoverC)) {
         sf::Vector2f pos(ox + hoverC * cell, oy + hoverR * cell);
@@ -353,7 +364,7 @@ void GomokuGame::DrawStones() {
         sf::CircleShape preview(sr);
         preview.setOrigin(sr, sr);
         preview.setPosition(pos);
-        preview.setFillColor(sf::Color(col.r, col.g, col.b, 120));
+        preview.setFillColor(sf::Color(col.r, col.g, col.b, 120));  // 半透明
         preview.setOutlineColor(sf::Color(col.r, col.g, col.b, 180));
         preview.setOutlineThickness(2);
         window.draw(preview);
@@ -361,11 +372,10 @@ void GomokuGame::DrawStones() {
 }
 
 // ==================== 渲染：右侧 UI ====================
-
 void GomokuGame::DrawUI() {
     if (!fontLoaded) return;
 
-    // 标题
+    // 标题栏
     sf::RectangleShape tb(sf::Vector2f(420, 55));
     tb.setPosition(715, 20);
     tb.setFillColor(sf::Color(65, 50, 35));
@@ -374,7 +384,7 @@ void GomokuGame::DrawUI() {
     window.draw(tb);
     DrawText(L"\u4E94\u5B50\u68CB", 925, 50, 26, sf::Color(220, 200, 170), true);
 
-    // 关闭按钮（返回主菜单）
+    // 关闭按钮（✖）
     auto drawCloseBtn = [this]() {
         sf::RectangleShape cb(sf::Vector2f(closeBtn.bounds.width, closeBtn.bounds.height));
         cb.setPosition(closeBtn.bounds.left, closeBtn.bounds.top);
@@ -382,6 +392,7 @@ void GomokuGame::DrawUI() {
         cb.setOutlineColor(sf::Color(240, 90, 90));
         cb.setOutlineThickness(1.5f);
         window.draw(cb);
+
         sf::Text t;
         t.setFont(font);
         t.setString(L"\u2716");
@@ -395,7 +406,7 @@ void GomokuGame::DrawUI() {
     };
     drawCloseBtn();
 
-    // 回合信息
+    // 回合信息面板
     sf::RectangleShape turnBg(sf::Vector2f(420, 90));
     turnBg.setPosition(715, 85);
     turnBg.setFillColor(sf::Color(60, 48, 34));
@@ -403,20 +414,21 @@ void GomokuGame::DrawUI() {
     turnBg.setOutlineThickness(1);
     window.draw(turnBg);
 
+    // 根据游戏状态显示不同信息
     std::wstring turnText;
     sf::Color turnColor, stoneColor;
     if (gameOver) {
         if (isDraw) {
-            turnText = L"\u5E73\u5C40\uFF01";
+            turnText = L"\u5E73\u5C40\uFF01";            // "平局！"
             turnColor = sf::Color(220, 220, 120);
             stoneColor = sf::Color(200, 200, 100);
         } else if (surrendered) {
-            turnText = L"\u8BA4\u8F93";
+            turnText = L"\u8BA4\u8F93";                 // "认输"
             turnColor = sf::Color(255, 150, 100);
             stoneColor = sf::Color(150, 100, 80);
         } else {
             turnText = (winner == 1) ? L"\u9ED1\u65B9\u80DC\u5229\uFF01" : L"\u767D\u65B9\u80DC\u5229\uFF01";
-            turnColor = (winner == 1) ? sf::Color(255, 215, 0) : sf::Color(255, 215, 0);
+            turnColor = sf::Color(255, 215, 0);         // 金色
             stoneColor = (winner == 1) ? sf::Color(30, 30, 30) : sf::Color(240, 240, 240);
         }
     } else {
@@ -425,7 +437,7 @@ void GomokuGame::DrawUI() {
         stoneColor = (currentTurn == 1) ? sf::Color(30, 30, 30) : sf::Color(240, 240, 240);
     }
 
-    // 棋子颜色指示器
+    // 棋子颜色指示器（小圆点）
     sf::CircleShape ind(10);
     ind.setOrigin(10, 10);
     ind.setPosition(745, 130);
@@ -436,17 +448,18 @@ void GomokuGame::DrawUI() {
 
     DrawText(turnText, 935, 130, 28, turnColor, true);
 
-    // 按钮
+    // 绘制按钮的 lambda（带阴影效果）
     auto drawBtn = [this](const RectButton& btn) {
-        // 阴影
+        // 按钮阴影
         sf::RectangleShape sh(sf::Vector2f(btn.bounds.width, btn.bounds.height));
         sh.setPosition(btn.bounds.left + 2, btn.bounds.top + 2);
         sh.setFillColor(sf::Color(20, 15, 10, 100));
         window.draw(sh);
-        // 主体
+
+        // 按钮主体
         sf::RectangleShape r(sf::Vector2f(btn.bounds.width, btn.bounds.height));
         r.setPosition(btn.bounds.left, btn.bounds.top);
-        if (btn.hovered) {
+        if (btn.hovered) {                               // 悬停时高亮
             r.setFillColor(sf::Color(110, 92, 72));
             r.setOutlineColor(sf::Color(160, 140, 110));
         } else {
@@ -455,7 +468,8 @@ void GomokuGame::DrawUI() {
         }
         r.setOutlineThickness(3);
         window.draw(r);
-        // 文字
+
+        // 按钮文字
         sf::Text t;
         t.setFont(font);
         t.setString(btn.label);
@@ -473,46 +487,47 @@ void GomokuGame::DrawUI() {
     drawBtn(surrenderBtn);
 
     // 操作提示
-    DrawText(L"\u5DE6\u952E\u70B9\u51FB\u843D\u5B50", 925, 380, 14,
+    DrawText(L"\u5DE6\u952E\u70B9\u51FB\u843D\u5B50", 925, 380, 14,    // "左键点击落子"
              sf::Color(160, 140, 120), true);
-    DrawText(L"\u9ED1\u5148\u767D\u540E \u4EA4\u66FF\u843D\u5B50", 925, 405, 14,
+    DrawText(L"\u9ED1\u5148\u767D\u540E \u4EA4\u66FF\u843D\u5B50", 925, 405, 14,  // "黑先白后 交替落子"
              sf::Color(140, 120, 100), true);
 
-    // 底部版本
+    // 版本信息
     DrawText(L"v0.1  C++17 + SFML 2.6.2", 925, WIN_H - 20, 12,
              sf::Color(100, 90, 80), true);
 }
 
-// ==================== 渲染：游戏结束 ====================
-
+// ==================== 渲染：游戏结束遮罩 ====================
 void GomokuGame::DrawGameOver() {
+    // 半透明黑色遮罩（逐渐变暗）
     float alpha = std::min(gameOverTimer * 200.f, 180.f);
     sf::RectangleShape ov(sf::Vector2f((float)WIN_W, (float)WIN_H));
     ov.setPosition(0, 0);
     ov.setFillColor(sf::Color(0, 0, 0, (sf::Uint8)alpha));
     window.draw(ov);
 
-    if (gameOverTimer <= 0.5f) return;
+    if (gameOverTimer <= 0.5f) return;                   // 0.5 秒后才显示文字
 
+    // 文字渐显效果
     float ta = std::min((gameOverTimer - 0.5f) * 400.f, 255.f);
-    std::wstring mt, st;
+    std::wstring mt, st;                                 // 主标题 and 副标题
     sf::Color mc;
 
     if (isDraw) {
-        mt = L"\u5E73\u5C40";
+        mt = L"\u5E73\u5C40";                            // "平局"
         mc = sf::Color(255, 255, 100, (sf::Uint8)ta);
-        st = L"\u68CB\u76D8\u5DF2\u6EE1";
+        st = L"\u68CB\u76D8\u5DF2\u6EE1";               // "棋盘已满"
     } else if (surrendered) {
         mt = (winner == 1) ? L"\u9ED1\u65B9\u80DC\u5229" : L"\u767D\u65B9\u80DC\u5229";
         mc = (winner == 1) ? sf::Color(200, 200, 200, (sf::Uint8)ta)
                            : sf::Color(255, 255, 200, (sf::Uint8)ta);
         st = (winner == 1) ? L"\u767D\u65B9\u8BA4\u8F93" : L"\u9ED1\u65B9\u8BA4\u8F93";
     } else {
-        mt = (winner == 1) ? L"\u9ED1\u65B9\u4E94\u8FDE\u80DC\u5229\uFF01"
-                           : L"\u767D\u65B9\u4E94\u8FDE\u80DC\u5229\uFF01";
+        mt = (winner == 1) ? L"\u9ED1\u65B9\u4E94\u8FDE\u80DC\u5229\uFF01"   // "黑方五连胜利！"
+                           : L"\u767D\u65B9\u4E94\u8FDE\u80DC\u5229\uFF01"; // "白方五连胜利！"
         mc = sf::Color(255, 215, 0, (sf::Uint8)ta);
-        st = (winner == 1) ? L"\u9ED1\u5B50\u4E94\u5B50\u8FDE\u73E0"
-                           : L"\u767D\u5B50\u4E94\u5B50\u8FDE\u73E0";
+        st = (winner == 1) ? L"\u9ED1\u5B50\u4E94\u5B50\u8FDE\u73E0"         // "黑子五子连珠"
+                           : L"\u767D\u5B50\u4E94\u5B50\u8FDE\u73E0";       // "白子五子连珠"
     }
 
     DrawText(mt, 575, 360, 60, mc, true);
@@ -523,11 +538,13 @@ void GomokuGame::DrawGameOver() {
     gameOverRestartBtn.bounds.left = bx;
     gameOverRestartBtn.bounds.top = by_;
 
+    // 按钮阴影
     sf::RectangleShape bs(sf::Vector2f(200, 50));
     bs.setPosition(bx + 3, by_ + 3);
     bs.setFillColor(sf::Color(0, 0, 0, (sf::Uint8)(ta * 0.5f)));
     window.draw(bs);
 
+    // 按钮主体
     sf::RectangleShape br(sf::Vector2f(200, 50));
     br.setPosition(bx, by_);
     br.setFillColor(gameOverRestartBtn.hovered
@@ -543,6 +560,7 @@ void GomokuGame::DrawGameOver() {
 
 // ==================== 辅助方法 ====================
 
+// 绘制文本（支持居中）
 void GomokuGame::DrawText(const std::wstring& text, float x, float y,
                            unsigned sz, sf::Color c, bool center) {
     if (!fontLoaded) return;
@@ -551,7 +569,7 @@ void GomokuGame::DrawText(const std::wstring& text, float x, float y,
     t.setString(text);
     t.setCharacterSize(sz);
     t.setFillColor(c);
-    if (center) {
+    if (center) {                                        // 居中：设置原点为文本中心
         auto b = t.getLocalBounds();
         t.setOrigin(b.left + b.width / 2.f, b.top + b.height / 2.f);
     }
@@ -559,9 +577,10 @@ void GomokuGame::DrawText(const std::wstring& text, float x, float y,
     window.draw(t);
 }
 
+// 获取棋子颜色：1=黑子(深色), 其他=白子(浅色)
 sf::Color GomokuGame::GetSideColor(int side) const {
     if (side == 1)
-        return sf::Color(20, 20, 20);   // 黑子
+        return sf::Color(20, 20, 20);                   // 黑子（近乎黑色）
     else
-        return sf::Color(245, 245, 245); // 白子
+        return sf::Color(245, 245, 245);                 // 白子（近乎白色）
 }
